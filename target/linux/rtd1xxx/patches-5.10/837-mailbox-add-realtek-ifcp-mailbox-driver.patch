@@ -1,0 +1,44 @@
+From 355231f9962170af09c1b1651644f8f7eec7be83 Mon Sep 17 00:00:00 2001
+From: Cheng-Yu Lee <cylee12@realtek.com>
+Date: Thu, 5 May 2022 10:38:08 +0800
+Subject: mailbox: add realtek ifcp mailbox driver
+
+Change-Id: I3fe09ff7f04a042d227231760ef30e2aefe0ac95
+---
+ drivers/mailbox/Kconfig                  |   7 +
+ drivers/mailbox/Makefile                 |   2 +
+ drivers/mailbox/rtk-ifcp-mailbox.c       | 318 +++++++++++++++++++++++
+ include/linux/mailbox/rtk-ifcp-message.h |  12 +
+ 4 files changed, 339 insertions(+)
+ create mode 100644 drivers/mailbox/rtk-ifcp-mailbox.c
+ create mode 100644 include/linux/mailbox/rtk-ifcp-message.h
+
+diff --git a/drivers/mailbox/Kconfig b/drivers/mailbox/Kconfig
+index 05b1009e28207..9e2e5bc4acaae 100644
+--- a/drivers/mailbox/Kconfig
++++ b/drivers/mailbox/Kconfig
+@@ -254,4 +254,11 @@ config QCOM_IPCC
+ 	  acts as an interrupt controller for receiving interrupts from clients.
+ 	  Say Y here if you want to build this driver.
+ 
++config RTK_IFCP_MBOX
++	tristate "Realtek IFCP Mailbox Support"
++	depends on ARCH_REALTEK && RTK_IFCP
++	help
++	  Mailbox implementation for Realtek platform. This mailbox is used
++	  for communication to IFCP. If unsure say N.
++
+ endif
+diff --git a/drivers/mailbox/Makefile b/drivers/mailbox/Makefile
+index 2e06e02b2e03d..d364bbee3bcca 100644
+--- a/drivers/mailbox/Makefile
++++ b/drivers/mailbox/Makefile
+@@ -54,3 +54,5 @@ obj-$(CONFIG_SUN6I_MSGBOX)	+= sun6i-msgbox.o
+ obj-$(CONFIG_SPRD_MBOX)		+= sprd-mailbox.o
+ 
+ obj-$(CONFIG_QCOM_IPCC)		+= qcom-ipcc.o
++
++obj-$(CONFIG_RTK_IFCP_MBOX)     += rtk-ifcp-mailbox.o
+-- 
+2.17.1
+

@@ -1,0 +1,12 @@
+diff --git a/utils/fio/Makefile b/utils/fio/Makefile
+index e9c284b16..d2bab7040 100644
+--- a/utils/fio/Makefile
++++ b/utils/fio/Makefile
+@@ -53,7 +53,6 @@ CONFIGURE_ARGS = \
+ 	--disable-lex \
+ 	--disable-pmem \
+ 	--disable-native \
+-	--disable-shm \
+ 	--disable-optimizations \
+ 	--disable-tcmalloc \
+ 	--cc="$(TARGET_CC)" \

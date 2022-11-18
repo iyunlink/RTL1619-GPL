@@ -1,0 +1,46 @@
+menu "Realtek Image File Creator Options"
+
+config RTK_FWDESC_ENABLE_SHA256
+	bool "Enable SHA256 Check"
+	depends on PACKAGE_rtk-imagefile
+	help
+	  Enable this option to verify sha256 of each image
+
+config RTK_SECURE_BOOT
+	bool "Enable Secure Boot"
+	depends on PACKAGE_rtk-imagefile
+	help
+	  Enable this for secure boot (only for eMMC)
+
+config RTK_SECURE_BOOT_ENCRYPT
+	bool "Encrypt firmware for Secure Boot"
+	depends on RTK_SECURE_BOOT
+	help
+	  Encrypt firmwares for secure boot
+
+config RTK_SECURE_BOOT_EFUSE
+	bool "Burn Out OTP"
+	depends on RTK_SECURE_BOOT_ENCRYPT
+	help
+	  Please enable this once only. The 1st time you want to enabled secure boot.
+
+config RTK_FORCE_SECURE_BOOT
+	bool "Force Secure Boot without Burn OTP"
+	depends on !RTK_SECURE_BOOT_EFUSE
+	help
+	  Turn on this option if you don't want to burn out the OTP while trying to enable secure boot.
+
+config RTK_3RD_PARTY_ROOTFS
+    bool "Use 3rd party OpenWrt rootfs"
+    help
+      Put your 3rd party OpenWrt rootfs in image folder and name it as realtek.tar.gz
+
+config RTK_3RD_PARTY_EXT4_ROOTFS
+    bool "Use 3rd party ext4 rootfs"
+    depends on RTK_3RD_PARTY_ROOTFS
+    select TARGET_ROOTFS_EXT4FS
+    select TARGET_EXT4_BLOCKSIZE_4K
+    help
+      Put your 3rd party rootfs in image folder and name it as realtek.tar.gz
+
+endmenu

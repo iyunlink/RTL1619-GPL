@@ -1,0 +1,101 @@
+# SPDX-License-Identifier: GPL-2.0-only
+menuconfig COMMON_CLK_REALTEK
+	tristate "Clock driver for Realtek"
+	depends on ARCH_REALTEK || COMPILE_TEST
+	select RESET_CONTROLLER
+	select MFD_SYSCON
+	select RTK_PM_TRACE
+	default y
+
+if COMMON_CLK_REALTEK
+
+config CLK_PLL_PSAUD
+	bool
+
+config CLK_PLL_DIF
+	bool
+
+config RTK_CLK_PLL_MMC
+	bool
+
+config COMMON_CLK_RTD1195
+	tristate "RTD1195 Clock Controller"
+	depends on COMMON_CLK_REALTEK
+	default y
+	help
+	  Support for the clock controller on RTD1195
+
+config COMMON_CLK_RTD1295
+	tristate "RTD1295 Clock Controller"
+	depends on COMMON_CLK_REALTEK
+	default y
+	help
+	  Support for the clock controller on RTD1295
+
+config COMMON_CLK_RTD1395
+	tristate "RTD1395 Clock Controller"
+	depends on COMMON_CLK_REALTEK
+	select CLK_DET
+	default y
+	help
+	  Support for the clock controller on RTD1395
+
+config COMMON_CLK_RTD1619
+	tristate "RTD1619 Clock Controller"
+	depends on COMMON_CLK_REALTEK
+	select CLK_PLL_PSAUD
+	select CLK_PLL_DIF
+	select RTK_CLK_PLL_MMC
+	select CLK_DET
+	default y
+	help
+	  Support for the clock controller on RTD1619
+
+config COMMON_CLK_RTD1319
+	tristate "RTD1319 Clock Controller"
+	depends on COMMON_CLK_REALTEK
+	select CLK_PLL_PSAUD
+	select CLK_PLL_DIF
+	select RTK_CLK_PLL_MMC
+	select CLK_DET
+	default y
+	help
+	  Support for the clock controller on RTD1319
+
+config COMMON_CLK_RTD1619B
+	tristate "RTD1619B Clock Controller"
+	depends on COMMON_CLK_REALTEK
+	select CLK_PLL_PSAUD
+	select CLK_PLL_DIF
+	select RTK_CLK_PLL_MMC
+	select CLK_DET
+	default y
+	help
+	  Support for the clock controller on RTD1619B
+
+config COMMON_CLK_RTD1319D
+	tristate "RTD1319D Clock Controller"
+	depends on COMMON_CLK_REALTEK
+	select CLK_PLL_PSAUD
+	select RTK_CLK_PLL_MMC
+	select CLK_DET
+	default y
+	help
+	  Support for the clock controller on RTD1319D
+
+config COMMON_CLK_REALTEK_TEE
+	tristate "Clock Driver to Control PLL SCPU over TEE"
+	depends on TEE
+	depends on COMMON_CLK_REALTEK
+	default y
+	help
+	  PLL BUS/DCSB would be fixed when enable this.
+
+config CLK_DET
+	tristate "Clock Detection Support"
+	depends on COMMON_CLK_REALTEK
+	default y
+	help
+	  This enables clock detection support.
+
+endif

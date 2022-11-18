@@ -1,0 +1,4 @@
+###
+###	  part = (name mount_point filesystem file size)
+part = rootfs / ext4 generic/rootfs.ext4.bin 4294967296
+part = param /param ext4 generic/param.bin 4194304

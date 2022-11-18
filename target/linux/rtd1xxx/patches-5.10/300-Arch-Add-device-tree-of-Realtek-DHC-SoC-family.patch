@@ -1,0 +1,214 @@
+From f2f5775107edd880e5bdd9c8bcf8f2f0fe1a8922 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 13:43:21 +0800
+Subject: [PATCH 09/54] 300: Arch: Add device tree of Realtek DHC SoC family
+
+---
+ .../devicetree/bindings/arm/realtek.yaml      | 12 ++++++++
+ arch/arm/boot/dts/Makefile                    | 11 +++++++-
+ arch/arm/mach-realtek/Kconfig                 |  5 +++-
+ arch/arm/mach-realtek/Makefile                |  2 ++
+ arch/arm64/boot/dts/realtek/Makefile          | 28 +++++++++++++++++++
+ arch/arm64/boot/dts/realtek/rtd129x.dtsi      |  4 ++-
+ arch/arm64/boot/dts/realtek/rtd139x.dtsi      |  4 ++-
+ arch/arm64/boot/dts/realtek/rtd16xx.dtsi      |  4 ++-
+ 8 files changed, 65 insertions(+), 5 deletions(-)
+
+diff --git a/Documentation/devicetree/bindings/arm/realtek.yaml b/Documentation/devicetree/bindings/arm/realtek.yaml
+index 9fb0297fe..437be72ea 100644
+--- a/Documentation/devicetree/bindings/arm/realtek.yaml
++++ b/Documentation/devicetree/bindings/arm/realtek.yaml
+@@ -42,6 +42,12 @@ properties:
+               - synology,ds418 # Synology DiskStation DS418
+           - const: realtek,rtd1296
+ 
++      # RTD1319 SoC based boards
++      - items:
++          - enum:
++              - realtek,pym-particles # Realtek Pym Particles EVB
++          - const: realtek,rtd1319
++
+       # RTD1395 SoC based boards
+       - items:
+           - enum:
+@@ -55,6 +61,12 @@ properties:
+               - realtek,mjolnir # Realtek Mjolnir EVB
+           - const: realtek,rtd1619
+ 
++      # RTD1619B SoC based boards
++      - items:
++          - enum:
++              - realtek,bleeding-edge # Realtek Bleeding Edge EVB
++          - const: realtek,rtd1619b
++
+ additionalProperties: true
+ 
+ ...
+diff --git a/arch/arm/boot/dts/Makefile b/arch/arm/boot/dts/Makefile
+index 7e8151681..c46504d91 100644
+--- a/arch/arm/boot/dts/Makefile
++++ b/arch/arm/boot/dts/Makefile
+@@ -924,7 +924,13 @@ dtb-$(CONFIG_ARCH_RDA) += \
+ 	rda8810pl-orangepi-i96.dtb
+ dtb-$(CONFIG_ARCH_REALTEK) += \
+ 	rtd1195-horseradish.dtb \
+-	rtd1195-mele-x1000.dtb
++	rtd1195-mele-x1000.dtb \
++	rtd1312c-stormbreaker-2gb.dtb \
++	rtd1315c-repulsor-2gb.dtb \
++	rtd1319-pymparticles-2gb.dtb \
++	rtd1319-rescue.dtb \
++	rtd1619b-bleedingedge-2gb.dtb \
++	rtd1619b-rescue.dtb 
+ dtb-$(CONFIG_ARCH_REALVIEW) += \
+ 	arm-realview-pb1176.dtb \
+ 	arm-realview-pb11mp.dtb \
+@@ -1409,3 +1415,6 @@ dtb-$(CONFIG_ARCH_ASPEED) += \
+ 	aspeed-bmc-opp-zaius.dtb \
+ 	aspeed-bmc-portwell-neptune.dtb \
+ 	aspeed-bmc-quanta-q71l.dtb
++
++always		:= $(dtb-y)
++subdir-y	:= $(dts-dirs)
+diff --git a/arch/arm/mach-realtek/Kconfig b/arch/arm/mach-realtek/Kconfig
+index 19fdcf093..34ae62c4d 100644
+--- a/arch/arm/mach-realtek/Kconfig
++++ b/arch/arm/mach-realtek/Kconfig
+@@ -3,9 +3,12 @@ menuconfig ARCH_REALTEK
+ 	bool "Realtek SoCs"
+ 	depends on ARCH_MULTI_V7
+ 	select ARM_GIC
++	select ARM_GIC_V3
+ 	select ARM_GLOBAL_TIMER
+ 	select CLKSRC_ARM_GLOBAL_TIMER_SCHED_CLOCK
+ 	select GENERIC_IRQ_CHIP
++	select PINCTRL
+ 	select RESET_CONTROLLER
+ 	help
+-	  This enables support for the Realtek RTD1195 SoC family.
++	  This enables support for the Realtek DHC SoC family.
++
+diff --git a/arch/arm/mach-realtek/Makefile b/arch/arm/mach-realtek/Makefile
+index 5382d5bbd..81eec6a46 100644
+--- a/arch/arm/mach-realtek/Makefile
++++ b/arch/arm/mach-realtek/Makefile
+@@ -1,2 +1,4 @@
+ # SPDX-License-Identifier: GPL-2.0-or-later
+ obj-y += rtd1195.o
++obj-y += rtd13xx.o
++
+diff --git a/arch/arm64/boot/dts/realtek/Makefile b/arch/arm64/boot/dts/realtek/Makefile
+index ef8d8fcba..0d54ea1cf 100644
+--- a/arch/arm64/boot/dts/realtek/Makefile
++++ b/arch/arm64/boot/dts/realtek/Makefile
+@@ -9,7 +9,41 @@ dtb-$(CONFIG_ARCH_REALTEK) += rtd1295-zidoo-x9s.dtb
+ 
+ dtb-$(CONFIG_ARCH_REALTEK) += rtd1296-ds418.dtb
+ 
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1311-pymparticles-2gb-melon.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1311-pymparticles-4gb-melon.dtb
++
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1312c-stormbreaker-1gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1312c-stormbreaker-2gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1312c-rescue.dtb
++
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1315c-arcreactor-2gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1315c-morgan-2gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1315c-repulsor-1gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1315c-repulsor-2gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1315c-rescue.dtb
++
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1319-pymparticles-2gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1319-rescue.dtb
++
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1319d-rescue.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1319d-rescue-nand.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1319d-steatoda-2gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1319d-steatoda-2gb-rdk.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1319d-webshooters-2gb.dtb
++
+ dtb-$(CONFIG_ARCH_REALTEK) += rtd1395-bpi-m4.dtb
+ dtb-$(CONFIG_ARCH_REALTEK) += rtd1395-lionskin.dtb
+ 
+ dtb-$(CONFIG_ARCH_REALTEK) += rtd1619-mjolnir.dtb
++
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1619b-backinblack-2gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1619b-bleedingedge-2gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1619b-bleedingedge-2gb-nand.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1619b-bleedingedge-3gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1619b-bleedingedge-4gb.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1619b-rescue.dtb
++dtb-$(CONFIG_ARCH_REALTEK) += rtd1619b-rescue-nand.dtb
++
++always-y	:= $(dtb-y)
++subdir-y	:= $(dts-dirs)
++
+diff --git a/arch/arm64/boot/dts/realtek/rtd129x.dtsi b/arch/arm64/boot/dts/realtek/rtd129x.dtsi
+index 39aefe66a..c97e36a6b 100644
+--- a/arch/arm64/boot/dts/realtek/rtd129x.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd129x.dtsi
+@@ -48,7 +48,7 @@
+ 		clock-output-names = "osc27M";
+ 	};
+ 
+-	soc {
++	soc@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+@@ -111,6 +111,8 @@
+ 
+ 		gic: interrupt-controller@ff011000 {
+ 			compatible = "arm,gic-400";
++			#address-cells = <1>;
++			#size-cells = <1>;
+ 			reg = <0xff011000 0x1000>,
+ 			      <0xff012000 0x2000>,
+ 			      <0xff014000 0x2000>,
+diff --git a/arch/arm64/boot/dts/realtek/rtd139x.dtsi b/arch/arm64/boot/dts/realtek/rtd139x.dtsi
+index a3c10ceeb..e69ba204c 100644
+--- a/arch/arm64/boot/dts/realtek/rtd139x.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd139x.dtsi
+@@ -47,7 +47,7 @@
+ 		clock-output-names = "osc27M";
+ 	};
+ 
+-	soc {
++	soc@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+@@ -109,6 +109,8 @@
+ 
+ 		gic: interrupt-controller@ff011000 {
+ 			compatible = "arm,gic-400";
++			#address-cells = <1>;
++			#size-cells = <1>;
+ 			reg = <0xff011000 0x1000>,
+ 			      <0xff012000 0x2000>,
+ 			      <0xff014000 0x2000>,
+diff --git a/arch/arm64/boot/dts/realtek/rtd16xx.dtsi b/arch/arm64/boot/dts/realtek/rtd16xx.dtsi
+index afba5f04c..9a1872683 100644
+--- a/arch/arm64/boot/dts/realtek/rtd16xx.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd16xx.dtsi
+@@ -123,7 +123,7 @@
+ 		#clock-cells = <0>;
+ 	};
+ 
+-	soc {
++	soc@0 {
+ 		compatible = "simple-bus";
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+@@ -185,6 +185,8 @@
+ 
+ 		gic: interrupt-controller@ff100000 {
+ 			compatible = "arm,gic-v3";
++			#address-cells = <1>;
++			#size-cells = <1>;
+ 			reg = <0xff100000 0x10000>,
+ 			      <0xff140000 0xc0000>;
+ 			interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
+-- 
+2.17.1
+

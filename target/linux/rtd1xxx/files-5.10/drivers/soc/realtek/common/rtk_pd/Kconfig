@@ -1,0 +1,11 @@
+menu "Realtek Power Domain"
+
+config PD_REALTEK
+	tristate "Realtek Power Domain Support"
+	depends on PM
+	depends on ARCH_REALTEK
+	select PM_GENERIC_DOMAINS
+	select RTK_PM_TRACE
+	default y
+
+endmenu

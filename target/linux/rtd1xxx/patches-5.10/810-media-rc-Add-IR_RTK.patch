@@ -1,0 +1,66 @@
+From 67536aea1e477df7ebf2df44783d872276213e3f Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:18:34 +0800
+Subject: [PATCH 29/54] 810: media: rc: Add IR_RTK
+
+---
+ drivers/media/rc/Kconfig          | 2 ++
+ drivers/media/rc/Makefile         | 2 ++
+ drivers/media/rc/keymaps/Makefile | 2 ++
+ include/media/rc-map.h            | 2 ++
+ 4 files changed, 8 insertions(+)
+
+diff --git a/drivers/media/rc/Kconfig b/drivers/media/rc/Kconfig
+index 2c0ee2e5b..feafb1950 100644
+--- a/drivers/media/rc/Kconfig
++++ b/drivers/media/rc/Kconfig
+@@ -403,6 +403,8 @@ config IR_RX51
+ 
+ source "drivers/media/rc/img-ir/Kconfig"
+ 
++source "drivers/media/rc/rtk-ir/Kconfig"
++
+ config RC_LOOPBACK
+ 	tristate "Remote Control Loopback Driver"
+ 	depends on RC_CORE
+diff --git a/drivers/media/rc/Makefile b/drivers/media/rc/Makefile
+index ff6a8fc4c..6520e2b1c 100644
+--- a/drivers/media/rc/Makefile
++++ b/drivers/media/rc/Makefile
+@@ -52,3 +52,5 @@ obj-$(CONFIG_IR_ZX) += zx-irdec.o
+ obj-$(CONFIG_IR_TANGO) += tango-ir.o
+ obj-$(CONFIG_RC_XBOX_DVD) += xbox_remote.o
+ obj-$(CONFIG_IR_TOY) += ir_toy.o
++obj-$(CONFIG_IR_RTK) += rtk-ir/
++
+diff --git a/drivers/media/rc/keymaps/Makefile b/drivers/media/rc/keymaps/Makefile
+index 3581761e9..761809e73 100644
+--- a/drivers/media/rc/keymaps/Makefile
++++ b/drivers/media/rc/keymaps/Makefile
+@@ -92,7 +92,9 @@ obj-$(CONFIG_RC_MAP) += rc-adstech-dvb-t-pci.o \
+ 			rc-hauppauge.o \
+ 			rc-rc6-mce.o \
+ 			rc-real-audio-220-32-keys.o \
++			rc-realtek-dhc.o \
+ 			rc-reddo.o \
++			rc-ruwido.o \
+ 			rc-snapstream-firefly.o \
+ 			rc-streamzap.o \
+ 			rc-tango.o \
+diff --git a/include/media/rc-map.h b/include/media/rc-map.h
+index c3effcdf2..8c27c473d 100644
+--- a/include/media/rc-map.h
++++ b/include/media/rc-map.h
+@@ -303,7 +303,9 @@ struct rc_map *rc_map_get(const char *name);
+ #define RC_MAP_RC5_TV                    "rc-rc5-tv"
+ #define RC_MAP_RC6_MCE                   "rc-rc6-mce"
+ #define RC_MAP_REAL_AUDIO_220_32_KEYS    "rc-real-audio-220-32-keys"
++#define RC_MAP_REALTEK_DHC               "rc-realtek-dhc"
+ #define RC_MAP_REDDO                     "rc-reddo"
++#define RC_MAP_RUWIDO                    "rc-ruwido"
+ #define RC_MAP_SNAPSTREAM_FIREFLY        "rc-snapstream-firefly"
+ #define RC_MAP_STREAMZAP                 "rc-streamzap"
+ #define RC_MAP_SU3000                    "rc-su3000"
+-- 
+2.17.1
+

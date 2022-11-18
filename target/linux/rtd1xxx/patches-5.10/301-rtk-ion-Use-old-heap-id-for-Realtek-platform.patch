@@ -1,0 +1,91 @@
+From c31cfe4453ff961c4cbcb33ed96a306d0911d73f Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Thu, 13 Jan 2022 14:28:01 +0800
+Subject: [PATCH 01/54] 301: rtk: ion: Use old heap id for Realtek platform
+
+- Export the internal_dev to allow the module to get the device structure.
+- replace vm_map_ram() in ion_heap_clear_pages()
+- add ion_get_ion_device() to get internal_dev device
+---
+ drivers/staging/android/ion/ion.c        | 14 ++++++++++++--
+ drivers/staging/android/ion/ion_buffer.c |  4 ++--
+ include/uapi/linux/ion.h                 |  4 ++--
+ 3 files changed, 16 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/staging/android/ion/ion.c b/drivers/staging/android/ion/ion.c
+index 268c4610c..017a8ae72 100644
+--- a/drivers/staging/android/ion/ion.c
++++ b/drivers/staging/android/ion/ion.c
+@@ -29,7 +29,14 @@
+ 
+ #define ION_CURRENT_ABI_VERSION  2
+ 
+-static struct ion_device *internal_dev;
++struct ion_device *internal_dev;
++static int heap_id;
++
++struct ion_device *ion_get_ion_device(void)
++{
++	return internal_dev;
++}
++EXPORT_SYMBOL_GPL(ion_get_ion_device);
+ 
+ /* Entry into ION allocator for rest of the kernel */
+ struct dma_buf *ion_alloc(size_t len, unsigned int heap_id_mask,
+@@ -370,6 +377,9 @@ int __ion_device_add_heap(struct ion_heap *heap, struct module *owner)
+ 
+ 	heap->debugfs_dir = heap_root;
+ 	down_write(&dev->lock);
++	heap->id = heap_id++;
++	dev->heap_cnt++;
++#if 0
+ 	ret = ion_assign_heap_id(heap, dev);
+ 	if (ret) {
+ 		pr_err("%s: Failed to assign heap id for heap type %x\n",
+@@ -377,7 +387,7 @@ int __ion_device_add_heap(struct ion_heap *heap, struct module *owner)
+ 		up_write(&dev->lock);
+ 		goto out_debugfs_cleanup;
+ 	}
+-
++#endif
+ 	/*
+ 	 * use negative heap->id to reverse the priority -- when traversing
+ 	 * the list later attempt higher id numbers first
+diff --git a/drivers/staging/android/ion/ion_buffer.c b/drivers/staging/android/ion/ion_buffer.c
+index 61ac23043..9baca1a47 100644
+--- a/drivers/staging/android/ion/ion_buffer.c
++++ b/drivers/staging/android/ion/ion_buffer.c
+@@ -95,12 +95,12 @@ static struct ion_buffer *ion_buffer_create(struct ion_heap *heap,
+ 
+ static int ion_clear_pages(struct page **pages, int num, pgprot_t pgprot)
+ {
+-	void *addr = vm_map_ram(pages, num, -1, pgprot);
++	void *addr = vmap(pages, num, VM_MAP, pgprot);
+ 
+ 	if (!addr)
+ 		return -ENOMEM;
+ 	memset(addr, 0, PAGE_SIZE * num);
+-	vm_unmap_ram(addr, num);
++	vunmap(addr);
+ 
+ 	return 0;
+ }
+diff --git a/include/uapi/linux/ion.h b/include/uapi/linux/ion.h
+index 371e44662..7f5ca67b5 100644
+--- a/include/uapi/linux/ion.h
++++ b/include/uapi/linux/ion.h
+@@ -24,9 +24,9 @@
+  */
+ enum ion_heap_type {
+ 	ION_HEAP_TYPE_SYSTEM = 0,
+-	ION_HEAP_TYPE_DMA = 2,
++	ION_HEAP_TYPE_DMA = 4,
+ 	/* reserved range for future standard heap types */
+-	ION_HEAP_TYPE_CUSTOM = 16,
++	ION_HEAP_TYPE_CUSTOM = 5,
+ 	ION_HEAP_TYPE_MAX = 31,
+ };
+ 
+-- 
+2.17.1
+

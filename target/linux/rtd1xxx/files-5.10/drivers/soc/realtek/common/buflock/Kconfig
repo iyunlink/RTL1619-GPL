@@ -1,0 +1,6 @@
+config RTK_BUFLOCK
+	tristate "Realtek BUFLOCK driver"
+	default n
+	help
+	  Realtek BUFLOCK driver
+

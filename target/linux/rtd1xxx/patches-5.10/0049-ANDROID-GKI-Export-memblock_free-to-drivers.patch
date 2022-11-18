@@ -1,0 +1,38 @@
+From 5e4ca535c9aeeb0ca9b7af23612bd4f10d1f0828 Mon Sep 17 00:00:00 2001
+From: Alistair Delva <adelva@google.com>
+Date: Thu, 4 Jun 2020 09:29:56 -0700
+Subject: [PATCH 49/50] ANDROID: GKI: Export memblock_free to drivers
+
+On architectures that support the preservation of memblock metadata
+after __init, allow drivers to call memblock_free() to free a
+reservation made by early arch code. This is a hack to support the
+freeing of bootsplash reservations passed to Linux by the bootloader.
+
+(This should be reworked in future versions of Android; do not
+cherry-pick this patch forward.)
+
+Bug: 139653858
+Bug: 174620135
+Change-Id: I32c0ee70c33c94deff70aa548896caa9978396fb
+Signed-off-by: Alistair Delva <adelva@google.com>
+---
+ mm/memblock.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/mm/memblock.c b/mm/memblock.c
+index f72d53957..98ee1b8c3 100644
+--- a/mm/memblock.c
++++ b/mm/memblock.c
+@@ -814,6 +814,9 @@ int __init_memblock memblock_free(phys_addr_t base, phys_addr_t size)
+ 	kmemleak_free_part_phys(base, size);
+ 	return memblock_remove_range(&memblock.reserved, base, size);
+ }
++#ifdef CONFIG_ARCH_KEEP_MEMBLOCK
++EXPORT_SYMBOL_GPL(memblock_free);
++#endif
+ 
+ int __init_memblock memblock_reserve(phys_addr_t base, phys_addr_t size)
+ {
+-- 
+2.17.1
+

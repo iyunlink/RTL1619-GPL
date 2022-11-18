@@ -1,0 +1,23 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2022 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd1319d-steatoda.dtsi"
+
+/ {
+	compatible = "realtek,steatoda", "realtek,rtd1319d";
+	model = "Realtek Steatoda EVB (2GB)";
+
+	memory@40000 {
+		device_type = "memory";
+		reg = <0x00040000 0x7ffc0000>; /* 2 GB */
+	};
+};
+
+&display_subsystem {
+	ports = <&vo_out_legacy>;
+	status = "okay";
+};

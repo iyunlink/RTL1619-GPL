@@ -1,0 +1,27 @@
+Realtek ALSA Driver.
+
+Required properties:
+- compatible : "realtek,rtk-alsa-pcm"
+- reg : The register base for the clock enable.
+- interrupts : One interrupt, used by the controller.
+- #address-cells : <1>, as required by generic alsa binding.
+- #size-cells : <0>, also as required by generic alsa binding.
+- pinctrl-names : Names of pinmux set of corresponding output mode.
+- pinctrl-0 : The default pinmux set.
+- num-chipselect : The number of chipselects. It should be 1.
+- bus-num : The bus number of this alsa controller.
+- clock-frequency : The max. frequency of this alsa controller.
+- clocks : phandles for the clocks
+- resets : phandles for the resets
+
+Child nodes as per the generic alsa binding.
+
+Example:
+
+	sound: sound@10 {
+		compatible = "realtek,rtk-alsa-pcm";
+		reg = <0x10 0x1000>; /* CLK_EN2 */
+		realtek,refclk = <&refclk>;
+		status = "okay";
+	};
+

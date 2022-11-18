@@ -1,0 +1,57 @@
+Realtek Low-speed Analog to Digital Converter
+
+This LSADC has 2 pads with 6-bits resolution for 0 ~ 3.3V.
+
+Required properties:
+- compatible: should be one of
+    "realtek,rtk-lsadc0"
+    "realtek,rtk-lsadc"
+- interrupt-parent: phandle to the parent interrupt controller
+    see: Documentation/devicetree/bindings/interrupt-controller/interrupts.txt
+- interrupts: IRQ line for the LSADC
+- reg: Offset and length of the LSADC block register set.
+- clk_gating_en: clock gating for LSADC is used for power saving.
+    0: disable
+    1: enable
+- clocks: Clock used for this block.
+- resets: phandle to reset this block.
+
+Sub-nodes:
+Each LSADC pad is configured as a subnode.
+
+Required properties for subnodes:
+- activate: 0:in-activate, 1:activate
+- ctrl_mode: 0:voltage mode, 1:current mode
+- sw_idx: 0:External input pin 0, 1:External input pin 1
+- voltage_threshold: voltage threshold to trigger interrupt
+- adc_val_baseline: absolute baseline to reset adc_val
+
+
+Example node:
+
+	lsadc@7900 {
+		compatible = "realtek,rtk-lsadc0";
+		interrupt-parent =  <&iso_irq_mux>;
+		interrupts = <3>;
+		reg = <0x7900 0x200>,
+		      <0x34c 0x4>;
+		clk_gating_en = <1>;
+		clocks = <&ic IC_CKE_LSADC_ECOA2>;
+		resets = <&ic IC_RSTN_LSADC_ECOA2>;
+		lsadc0-pad0 {
+			activate = <1>;
+			ctrl_mode = <0>;
+			sw_idx = <0>;
+			voltage_threshold = <32>;
+			adc_val_baseline = <63>;
+		};
+
+		lsadc0-pad1 {
+			activate = <0>;
+			ctrl_mode = <0>;
+			sw_idx = <1>;
+			voltage_threshold = <63>;
+			adc_val_baseline = <63>;
+		};
+	};
+

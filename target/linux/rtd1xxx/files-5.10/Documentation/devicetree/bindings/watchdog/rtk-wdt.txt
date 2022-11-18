@@ -1,0 +1,30 @@
+Realtek watchdog DT-bindings
+============================
+
+Required properties:
+
+- compatible : should be "realtek,watchdog".
+
+- reg : should contains 1 or 2 base physical address and size of registers
+
+   the first address/size is for watchdog registers,
+   the second address/size is optional and for watchdog ov-rstb registers.
+
+
+Optional properties:
+
+- timeout-sec: contains the watchdog timeout in seconds
+
+- restart_priority: contains a value for restart_priority
+
+- ov-rstb-oe-init: initial value of ov-rstb-oe
+
+- ov-rstb-oe: value of ov-rstb-oe to be set during reboot 
+
+Example:
+
+	watchdog@10000000 {
+		compatible = "realtek,watchdog";
+		reg = <0x10000000 0x100>;
+		timeout-sec = <20>;
+	};

@@ -1,0 +1,15 @@
+Realtek reboot mode driver
+
+Required propertise:
+
+- compatible: should contain "realtek,reboot-mode".
+
+- reg: register to fill reboot command
+
+Exmaple:
+
+	reboot-mode {
+		compatible = "realtek,reboot-mode";
+		reg = <0x0 0x98007640 0x0 0x4>;
+		status = "okay";
+	};

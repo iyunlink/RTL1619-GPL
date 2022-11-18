@@ -1,0 +1,90 @@
+From de79d2867ee8b442bd4993a1965e3cfef28d3d2f Mon Sep 17 00:00:00 2001
+From: Yu Chen <chenyu56@huawei.com>
+Date: Sat, 20 Apr 2019 14:40:18 +0800
+Subject: [PATCH 2/2] ANDROID: usb: gadget: Add configfs attribuite for
+ controling match_existing_only
+
+Currently the "match_existing_only" of usb_gadget_driver in configfs is
+set to one which is not flexible.
+Dwc3 udc will be removed when usb core switch to host mode. This causes
+failure of writing name of dwc3 udc to configfs's UDC attribuite.
+To fix this we need to add a way to change the config of
+"match_existing_only".
+There are systems like Android do not support udev, so adding
+"match_existing_only" attribute to allow configuration by user is cost little.
+This patch adds a configfs attribuite for controling match_existing_only
+which allow user to config "match_existing_only".
+
+Cc: Andy Shevchenko <andy.shevchenko@gmail.com>
+Cc: Felipe Balbi <balbi@kernel.org>
+Cc: Greg Kroah-Hartman <gregkh@linuxfoundation.org>
+Cc: John Stultz <john.stultz@linaro.org>
+Cc: Binghui Wang <wangbinghui@hisilicon.com>
+Bug: 146450171
+Signed-off-by: Yu Chen <chenyu56@huawei.com>
+Signed-off-by: John Stultz <john.stultz@linaro.org>
+Change-Id: I7c61a45cd4d22a188838659d4cc3f0fbe0ac1bcf
+---
+ drivers/usb/gadget/configfs.c | 32 ++++++++++++++++++++++++++++++++
+ 1 file changed, 32 insertions(+)
+
+diff --git a/drivers/usb/gadget/configfs.c b/drivers/usb/gadget/configfs.c
+index 9b7fa53d6642..c7076ce76371 100644
+--- a/drivers/usb/gadget/configfs.c
++++ b/drivers/usb/gadget/configfs.c
+@@ -338,6 +338,36 @@ static ssize_t gadget_dev_desc_max_speed_store(struct config_item *item,
+ 	return -EINVAL;
+ }
+ 
++static ssize_t gadget_driver_match_existing_only_store(struct config_item *item,
++		const char *page, size_t len)
++{
++	struct gadget_info *gi = to_gadget_info(item);
++	struct usb_gadget_driver *gadget_driver = &(gi->composite.gadget_driver);
++	bool match_existing_only;
++	int ret;
++
++	ret = kstrtobool(page, &match_existing_only);
++	if (ret)
++		return ret;
++
++	if (match_existing_only)
++		gadget_driver->match_existing_only = 1;
++	else
++		gadget_driver->match_existing_only = 0;
++
++	return len;
++}
++
++static ssize_t gadget_driver_match_existing_only_show(struct config_item *item,
++		char *page)
++{
++	struct gadget_info *gi = to_gadget_info(item);
++	struct usb_gadget_driver *gadget_driver = &(gi->composite.gadget_driver);
++	bool match_existing_only = !!gadget_driver->match_existing_only;
++
++	return sprintf(page, "%s\n", match_existing_only ? "true" : "false");
++}
++
+ CONFIGFS_ATTR(gadget_dev_desc_, bDeviceClass);
+ CONFIGFS_ATTR(gadget_dev_desc_, bDeviceSubClass);
+ CONFIGFS_ATTR(gadget_dev_desc_, bDeviceProtocol);
+@@ -348,6 +378,7 @@ CONFIGFS_ATTR(gadget_dev_desc_, bcdDevice);
+ CONFIGFS_ATTR(gadget_dev_desc_, bcdUSB);
+ CONFIGFS_ATTR(gadget_dev_desc_, UDC);
+ CONFIGFS_ATTR(gadget_dev_desc_, max_speed);
++CONFIGFS_ATTR(gadget_, driver_match_existing_only);
+ 
+ static struct configfs_attribute *gadget_root_attrs[] = {
+ 	&gadget_dev_desc_attr_bDeviceClass,
+@@ -360,6 +391,7 @@ static struct configfs_attribute *gadget_root_attrs[] = {
+ 	&gadget_dev_desc_attr_bcdUSB,
+ 	&gadget_dev_desc_attr_UDC,
+ 	&gadget_dev_desc_attr_max_speed,
++	&gadget_attr_driver_match_existing_only,
+ 	NULL,
+ };
+ 
+-- 
+2.17.1
+

@@ -1,0 +1,41 @@
+Realtek DDRC PMU dt-bindings
+============================
+
+Required properties:
+- compatible:
+        "realtek,rtk-16xxb-ddrc-pmu" for rtd16xxb family
+- reg: address range of DDRC PMU
+
+Optional properties:
+- overflow: indicating the PMU has overflow interrupt
+
+Performance Counters Subnode
+----------------------------
+Each subnode of DDRC PMU represents a set of PMC groups which has its own
+counter groups and controlling mechanism, but will be enabled and disabled
+together with DDRC PMU.
+
+Required properties:
+- compatible:
+	"ddrc"
+	"ddrc-total"
+	"ddrc-log"
+
+Optional properties:
+- nr_defects: the number of counters which may work incorrectly
+- defects: array of the index of problematic counters
+
+Example:
+
+	ddrc-pmu: rtk-ddrc-pmu@94000 {
+		compatible = "realtek,rtk-16xxb-ddrc-pmu";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x0 0x94000 0x0 0x0800>;
+		overflow = <1>;
+
+		ddrc: ddrc {
+			nr_defects = <2>;
+			defects = <1 3>;
+		};
+	};

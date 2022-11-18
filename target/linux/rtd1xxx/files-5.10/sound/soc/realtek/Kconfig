@@ -1,0 +1,14 @@
+config SND_SOC_REALTEK
+	tristate "Realtek ALSA Driver"
+	select SND_PCM
+	select SND_SOC_COMPRESS
+	default y
+
+config SND_SOC_REALTEK_NOTIFY
+	tristate "Realtek ALSA Notfiy Driver"
+	depends on SND_SOC_REALTEK
+	default y
+
+config SND_SOC_REALTEK_FL3236
+	tristate "REALTEK Feature for fl3236 light driver"
+	default n

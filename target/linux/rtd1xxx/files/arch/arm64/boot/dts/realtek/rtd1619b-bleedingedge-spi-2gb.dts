@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2020 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd1619b-bleedingedge.dtsi"
+
+/ {
+	compatible = "realtek,bleeding-edge-spi", "realtek,rtd1619b";
+	model = "Realtek Bleeding Edge EVB SPI (2GB)";
+
+	memory@40000 {
+		device_type = "memory";
+		reg = <0x00040000 0x7ffc0000>; /* 2 GB */
+	};
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,460800 uio_pdrv_genirq.of_id=generic-uio init=/sbin/init root=/dev/mtdblock3 rootwait loglevel=8 mtdparts=RtkSFC:256k(u-boot-env),1280k(u-boot)ro,10752k(firmware),3072k(rootfs) NO_RESERVE";
+	};
+};
+
+&sfc {
+	status = "okay";
+};
+
+&cpu0 {
+	clocks = <&cc RTD1619B_CRT_PLL_SCPU>;
+};
+
+&cpu1 {
+	clocks = <&cc RTD1619B_CRT_PLL_SCPU>;
+};
+
+&cpu2 {
+	clocks = <&cc RTD1619B_CRT_PLL_SCPU>;
+};
+
+&cpu3 {
+	clocks = <&cc RTD1619B_CRT_PLL_SCPU>;
+};
+
+&pcie1 {
+	perst-gpios = <&gpio 71 GPIO_ACTIVE_HIGH>;
+	status = "disabled";
+};
+
+&pcie2 {
+	perst-gpios = <&gpio 70 GPIO_ACTIVE_HIGH>;
+};
+
+&sata_phy {
+	status = "okay";
+};
+
+&sata_phy0 {
+	status = "okay";
+};
+
+&ahci_sata {
+	status = "okay";
+};
+
+&sata_port0 {
+	sata-gpios = <&gpio 71 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&sata_port1 {
+	sata-gpios = <&gpio 70 GPIO_ACTIVE_HIGH>;
+};

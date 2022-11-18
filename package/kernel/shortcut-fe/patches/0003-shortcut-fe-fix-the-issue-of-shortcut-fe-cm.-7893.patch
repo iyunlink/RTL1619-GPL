@@ -1,0 +1,238 @@
+From a15f727e6fba32aa4b34f2306f31c23dae1a3e84 Mon Sep 17 00:00:00 2001
+From: Ailick <277498654@qq.com>
+Date: Thu, 23 Sep 2021 00:49:18 +0800
+Subject: [PATCH 3/6] shortcut-fe: fix the issue of shortcut-fe-cm. (#7893)
+
+* shortcut-fe: bug fixes: a problem of lookup routes when skb provided.
+---
+ shortcut-fe/sfe_cm.c | 37 +++++++++++++++++++++++++++----------
+ 1 file changed, 27 insertions(+), 10 deletions(-)
+
+Index: shortcut-fe-2021-03-17-697977d8/shortcut-fe/sfe_cm.c
+===================================================================
+--- shortcut-fe-2021-03-17-697977d8.orig/shortcut-fe/sfe_cm.c
++++ shortcut-fe-2021-03-17-697977d8/shortcut-fe/sfe_cm.c
+@@ -199,7 +199,7 @@ int sfe_cm_recv(struct sk_buff *skb)
+  * structure, obtain the hardware address.  This means this function also
+  * works if the neighbours are routers too.
+  */
+-static bool sfe_cm_find_dev_and_mac_addr(sfe_ip_addr_t *addr, struct net_device **dev, u8 *mac_addr, int is_v4)
++static bool sfe_cm_find_dev_and_mac_addr(struct sk_buff *skb, sfe_ip_addr_t *addr, struct net_device **dev, u8 *mac_addr, int is_v4)
+ {
+ 	struct neighbour *neigh;
+ 	struct rtable *rt;
+@@ -208,6 +208,15 @@ static bool sfe_cm_find_dev_and_mac_addr
+ 	struct net_device *mac_dev;
+ 
+ 	/*
++	 * If we have skb provided, use it as the original code is unable
++	 * to lookup routes that are policy routed.
++	*/
++	if (unlikely(skb)) {
++		dst = skb_dst(skb);
++		goto skip_dst_lookup;
++	}
++
++	/*
+ 	 * Look up the rtable entry for the IP address then get the hardware
+ 	 * address from its neighbour structure.  This means this work when the
+ 	 * neighbours are routers too.
+@@ -232,18 +241,21 @@ static bool sfe_cm_find_dev_and_mac_addr
+ 		dst = (struct dst_entry *)rt6;
+ 	}
+ 
++skip_dst_lookup:
+ 	rcu_read_lock();
+ 	neigh = sfe_dst_get_neighbour(dst, addr);
+ 	if (unlikely(!neigh)) {
+ 		rcu_read_unlock();
+-		dst_release(dst);
++		if (likely(!skb))
++			dst_release(dst);
+ 		goto ret_fail;
+ 	}
+ 
+ 	if (unlikely(!(neigh->nud_state & NUD_VALID))) {
+ 		rcu_read_unlock();
+ 		neigh_release(neigh);
+-		dst_release(dst);
++		if (likely(!skb))
++			dst_release(dst);
+ 		goto ret_fail;
+ 	}
+ 
+@@ -251,7 +263,8 @@ static bool sfe_cm_find_dev_and_mac_addr
+ 	if (!mac_dev) {
+ 		rcu_read_unlock();
+ 		neigh_release(neigh);
+-		dst_release(dst);
++		if (likely(!skb))
++			dst_release(dst);
+ 		goto ret_fail;
+ 	}
+ 
+@@ -261,7 +274,8 @@ static bool sfe_cm_find_dev_and_mac_addr
+ 	*dev = mac_dev;
+ 	rcu_read_unlock();
+ 	neigh_release(neigh);
+-	dst_release(dst);
++	if (likely(!skb))
++		dst_release(dst);
+ 
+ 	return true;
+ 
+@@ -291,6 +305,7 @@ static unsigned int sfe_cm_post_routing(
+ 	struct net_device *dest_dev;
+ 	struct net_device *src_dev_tmp;
+ 	struct net_device *dest_dev_tmp;
++	struct sk_buff *tmp_skb = NULL;
+ 	struct net_device *src_br_dev = NULL;
+ 	struct net_device *dest_br_dev = NULL;
+ 	struct nf_conntrack_tuple orig_tuple;
+@@ -581,25 +596,27 @@ static unsigned int sfe_cm_post_routing(
+ 	 * Get the net device and MAC addresses that correspond to the various source and
+ 	 * destination host addresses.
+ 	 */
+-	if (!sfe_cm_find_dev_and_mac_addr(&sic.src_ip, &src_dev_tmp, sic.src_mac, is_v4)) {
++	if (!sfe_cm_find_dev_and_mac_addr(NULL, &sic.src_ip, &src_dev_tmp, sic.src_mac, is_v4)) {
+ 		sfe_cm_incr_exceptions(SFE_CM_EXCEPTION_NO_SRC_DEV);
+ 		return NF_ACCEPT;
+ 	}
+ 	src_dev = src_dev_tmp;
+ 
+-	if (!sfe_cm_find_dev_and_mac_addr(&sic.src_ip_xlate, &dev, sic.src_mac_xlate, is_v4)) {
++	if (!sfe_cm_find_dev_and_mac_addr(NULL, &sic.src_ip_xlate, &dev, sic.src_mac_xlate, is_v4)) {
+ 		sfe_cm_incr_exceptions(SFE_CM_EXCEPTION_NO_SRC_XLATE_DEV);
+ 		goto done1;
+ 	}
+ 	dev_put(dev);
+-
+-	if (!sfe_cm_find_dev_and_mac_addr(&sic.dest_ip, &dev, sic.dest_mac, is_v4)) {
++	/* Somehow, for IPv6, we need this workaround as well */
++	if (unlikely(!is_v4))
++		tmp_skb = skb;
++	if (!sfe_cm_find_dev_and_mac_addr(tmp_skb, &sic.dest_ip, &dev, sic.dest_mac, is_v4)) {
+ 		sfe_cm_incr_exceptions(SFE_CM_EXCEPTION_NO_DEST_DEV);
+ 		goto done1;
+ 	}
+ 	dev_put(dev);
+ 
+-	if (!sfe_cm_find_dev_and_mac_addr(&sic.dest_ip_xlate, &dest_dev_tmp, sic.dest_mac_xlate, is_v4)) {
++	if (!sfe_cm_find_dev_and_mac_addr(skb, &sic.dest_ip_xlate, &dest_dev_tmp, sic.dest_mac_xlate, is_v4)) {
+ 		sfe_cm_incr_exceptions(SFE_CM_EXCEPTION_NO_DEST_XLATE_DEV);
+ 		goto done1;
+ 	}
+Index: shortcut-fe-2021-03-17-697977d8/fast-classifier/fast-classifier.c
+===================================================================
+--- shortcut-fe-2021-03-17-697977d8.orig/fast-classifier/fast-classifier.c
++++ shortcut-fe-2021-03-17-697977d8/fast-classifier/fast-classifier.c
+@@ -299,7 +299,7 @@ rx_exit:
+  * structure, obtain the hardware address.  This means this function also
+  * works if the neighbours are routers too.
+  */
+-static bool fast_classifier_find_dev_and_mac_addr(sfe_ip_addr_t *addr, struct net_device **dev, u8 *mac_addr, bool is_v4)
++static bool fast_classifier_find_dev_and_mac_addr(struct sk_buff *skb, sfe_ip_addr_t *addr, struct net_device **dev, u8 *mac_addr, bool is_v4)
+ {
+ 	struct neighbour *neigh;
+ 	struct rtable *rt;
+@@ -308,6 +308,15 @@ static bool fast_classifier_find_dev_and
+ 	struct net_device *mac_dev;
+ 
+ 	/*
++	 * If we have skb provided, use it as the original code is unable
++	 * to lookup routes that are policy routed.
++	*/
++	if (unlikely(skb)) {
++		dst = skb_dst(skb);
++		goto skip_dst_lookup;
++	}
++
++	/*
+ 	 * Look up the rtable entry for the IP address then get the hardware
+ 	 * address from its neighbour structure.  This means this works when the
+ 	 * neighbours are routers too.
+@@ -328,18 +337,21 @@ static bool fast_classifier_find_dev_and
+ 		dst = (struct dst_entry *)rt6;
+ 	}
+ 
++skip_dst_lookup:
+ 	rcu_read_lock();
+ 	neigh = sfe_dst_get_neighbour(dst, addr);
+ 	if (unlikely(!neigh)) {
+ 		rcu_read_unlock();
+-		dst_release(dst);
++		if (likely(!skb))
++			dst_release(dst);
+ 		goto ret_fail;
+ 	}
+ 
+ 	if (unlikely(!(neigh->nud_state & NUD_VALID))) {
+ 		rcu_read_unlock();
+ 		neigh_release(neigh);
+-		dst_release(dst);
++		if (likely(!skb))
++			dst_release(dst);
+ 		goto ret_fail;
+ 	}
+ 
+@@ -347,7 +359,8 @@ static bool fast_classifier_find_dev_and
+ 	if (!mac_dev) {
+ 		rcu_read_unlock();
+ 		neigh_release(neigh);
+-		dst_release(dst);
++		if (likely(!skb))
++			dst_release(dst);
+ 		goto ret_fail;
+ 	}
+ 
+@@ -357,7 +370,8 @@ static bool fast_classifier_find_dev_and
+ 	*dev = mac_dev;
+ 	rcu_read_unlock();
+ 	neigh_release(neigh);
+-	dst_release(dst);
++	if (likely(!skb))
++		dst_release(dst);
+ 
+ 	return true;
+ 
+@@ -778,6 +792,7 @@ static unsigned int fast_classifier_post
+ 	struct net_device *dest_dev;
+ 	struct net_device *src_dev_tmp;
+ 	struct net_device *dest_dev_tmp;
++	struct sk_buff *tmp_skb = NULL;
+ 	struct net_device *src_br_dev = NULL;
+ 	struct net_device *dest_br_dev = NULL;
+ 	struct nf_conntrack_tuple orig_tuple;
+@@ -1053,25 +1068,27 @@ static unsigned int fast_classifier_post
+ 	 * Get the net device and MAC addresses that correspond to the various source and
+ 	 * destination host addresses.
+ 	 */
+-	if (!fast_classifier_find_dev_and_mac_addr(&sic.src_ip, &src_dev_tmp, sic.src_mac, is_v4)) {
++	if (!fast_classifier_find_dev_and_mac_addr(NULL, &sic.src_ip, &src_dev_tmp, sic.src_mac, is_v4)) {
+ 		fast_classifier_incr_exceptions(FAST_CL_EXCEPTION_NO_SRC_DEV);
+ 		return NF_ACCEPT;
+ 	}
+ 	src_dev = src_dev_tmp;
+ 
+-	if (!fast_classifier_find_dev_and_mac_addr(&sic.src_ip_xlate, &dev, sic.src_mac_xlate, is_v4)) {
++	if (!fast_classifier_find_dev_and_mac_addr(NULL, &sic.src_ip_xlate, &dev, sic.src_mac_xlate, is_v4)) {
+ 		fast_classifier_incr_exceptions(FAST_CL_EXCEPTION_NO_SRC_XLATE_DEV);
+ 		goto done1;
+ 	}
+ 	dev_put(dev);
+-
+-	if (!fast_classifier_find_dev_and_mac_addr(&sic.dest_ip, &dev, sic.dest_mac, is_v4)) {
++	/* Somehow, for IPv6, we need this workaround as well */
++	if (unlikely(!is_v4))
++		tmp_skb = skb;
++	if (!fast_classifier_find_dev_and_mac_addr(tmp_skb, &sic.dest_ip, &dev, sic.dest_mac, is_v4)) {
+ 		fast_classifier_incr_exceptions(FAST_CL_EXCEPTION_NO_DEST_DEV);
+ 		goto done1;
+ 	}
+ 	dev_put(dev);
+ 
+-	if (!fast_classifier_find_dev_and_mac_addr(&sic.dest_ip_xlate, &dest_dev_tmp, sic.dest_mac_xlate, is_v4)) {
++	if (!fast_classifier_find_dev_and_mac_addr(skb, &sic.dest_ip_xlate, &dest_dev_tmp, sic.dest_mac_xlate, is_v4)) {
+ 		fast_classifier_incr_exceptions(FAST_CL_EXCEPTION_NO_DEST_XLATE_DEV);
+ 		goto done1;
+ 	}

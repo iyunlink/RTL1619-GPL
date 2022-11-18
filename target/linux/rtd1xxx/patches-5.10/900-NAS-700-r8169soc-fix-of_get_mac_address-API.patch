@@ -1,0 +1,41 @@
+From 1f296cba269700ccf7fcac91afeacbd9b9c0f6c2 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 15:31:15 +0800
+Subject: r8169soc: Fix of_get_mac_address() API in backport-5.10/732
+
+---
+ drivers/net/ethernet/realtek/r8169soc.c | 5 ++---
+ 1 file changed, 2 insertions(+), 3 deletions(-)
+
+Index: linux-5.10.109/drivers/net/ethernet/realtek/r8169soc.c
+===================================================================
+--- linux-5.10.109.orig/drivers/net/ethernet/realtek/r8169soc.c
++++ linux-5.10.109/drivers/net/ethernet/realtek/r8169soc.c
+@@ -10700,13 +10700,12 @@ static int rtl_init_one(struct platform_
+ 	struct net_device *ndev;
+ 	struct pm_dev_param *dev_param;
+ 	void __iomem *ioaddr;
+-	int i;
++	int err, i;
+ 	int rc;
+ 	int led_config;
+ 	u32 tmp;
+ 	int irq;
+ 	int retry;
+-	const char *mac_addr;
+ 	struct property *wake_mask;
+ 	struct property *wake_pattern;
+ 	char tmp_str[80];
+@@ -11273,9 +11272,9 @@ static int rtl_init_one(struct platform_
+ 	mutex_init(&tp->wk.mutex);
+ 
+ 	/* Get MAC address */
+-	mac_addr = of_get_mac_address(pdev->dev.of_node);
+-	if (mac_addr)
+-		rtl_rar_set(tp, (u8 *)mac_addr);
++	err = of_get_mac_address(pdev->dev.of_node, ndev->dev_addr);
++	if (!err)
++		rtl_rar_set(tp, (u8 *)ndev->dev_addr);
+ 
+ 	/* workaround: avoid getting deadbeef */
+ #define RETRY_MAX	10

@@ -1,0 +1,79 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2021 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/clock/rtd1319-clk.h>
+#include <dt-bindings/regulator/anpec,apw888x.h>
+#include <dt-bindings/soc/realtek,pm.h>
+#include <dt-bindings/thermal/thermal.h>
+
+#include "rtd13xx.dtsi"
+
+&cc {
+	compatible = "realtek,rtd1312c-crt-clk-n";
+};
+
+&cpu_tm {
+	compatible = "realtek,rtd1312c-thermal-sensor";
+};
+
+&pwr_ve1 {
+	assigned-clocks = <&cc RTD1319_CRT_CLK_VE1>, <&cc RTD1319_CRT_CLK_VE3>;
+	assigned-clock-parents = <&cc RTD1319_CRT_PLL_VE1>, <&cc RTD1319_CRT_PLL_VE1>;
+	assigned-clock-rates = <351000000>, <351000000>;
+};
+
+&emmc {
+	compatible = "rtd1312c-dw-cqe-emmc";
+};
+
+&pwm {
+	compatible = "realtek,rtk-pwm-v2";
+	reg = <0xcc 0x10>;
+	status = "okay";
+};
+
+&pinctrl {
+	pwm1_1_pins: pwm1_1_pins {
+		pins = "gpio_20";
+		function = "pwm0";
+	};
+
+	pwm2_1_pins: pwm2_1_pins {
+		pins = "gpio_34";
+		function = "sd";
+	};
+
+	pwm3_1_pins: pwm3_1_pins {
+		pins = "gpio_35";
+		function = "sd";
+	};
+};
+
+/delete-node/ &nic;
+/delete-node/ &rtc;
+/delete-node/ &sd;
+&audio_out {
+	/delete-node/ dac;
+};
+
+&{/} {
+    aliases {
+        rtc0 = &sw_rtc;
+    };
+
+    sw_rtc: sw-rtc {
+        compatible = "realtek,emulated-rtc";
+    };
+};
+
+&iso {
+    rtc-reload@64c {
+        compatible = "realtek,rtc-reload";
+        reg = <0x64c 0x4>;
+        status = "okay";
+    };
+};

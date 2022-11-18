@@ -1,0 +1,27 @@
+From f2425de7c9b78f64072819778284af4bac2f6a74 Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Sun, 10 Jul 2022 21:48:09 +0800
+Subject: dma-mapping: export arch_dma_prep_coherent()
+
+Export this function so that the kernel module can use it.
+
+Change-Id: Ia42c5829489b1e3f25d4e39f07d94c7f41208d0e
+---
+ arch/arm64/mm/dma-mapping.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/arch/arm64/mm/dma-mapping.c b/arch/arm64/mm/dma-mapping.c
+index 93e87b2875567..8481fff0576ad 100644
+--- a/arch/arm64/mm/dma-mapping.c
++++ b/arch/arm64/mm/dma-mapping.c
+@@ -29,6 +29,7 @@ void arch_dma_prep_coherent(struct page *page, size_t size)
+ {
+ 	__dma_flush_area(page_address(page), size);
+ }
++EXPORT_SYMBOL(arch_dma_prep_coherent);
+ 
+ #ifdef CONFIG_IOMMU_DMA
+ void arch_teardown_dma_ops(struct device *dev)
+-- 
+2.17.1
+

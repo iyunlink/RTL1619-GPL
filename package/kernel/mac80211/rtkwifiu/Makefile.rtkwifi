@@ -1,0 +1,3 @@
+obj-$(CPTCFG_RTL8822CS) += rtl8822cs/
+obj-$(CPTCFG_RTL8852BE) += rtl8852be/
+obj-$(CPTCFG_RTL8852BS) += rtl8852bs/

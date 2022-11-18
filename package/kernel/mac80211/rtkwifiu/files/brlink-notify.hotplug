@@ -1,0 +1,14 @@
+#!/bin/bash
+
+if [ "$INTERFACE" = "eth0" -o "$(echo $INTERFACE | cut -c 1-4)" = "wlan" ]; then
+  if [ "$ACTION" = "linkdown" -o "$ACTION" = "linkup" ]; then
+    if [ "$ACTION" = "linkup" ]; then
+      SIG_NO=1
+    elif [ "$ACTION" = "linkdown" ]; then
+      SIG_NO=2
+    fi
+    BR_NAME=`ls -l /sys/class/net/$INTERFACE/brport/bridge 2>/dev/null`
+    BR_NAME=${BR_NAME##*/}
+    [ -n "$BR_NAME" -a -f "/var/run/udhcpc-$BR_NAME.pid" ] && kill -SIGUSR$SIG_NO `cat /var/run/udhcpc-$BR_NAME.pid`
+  fi
+fi

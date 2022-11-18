@@ -1,0 +1,34 @@
+From 62fcb6039a829deadd31ab5c8026926f73ec0eab Mon Sep 17 00:00:00 2001
+From: Greg Kroah-Hartman <gregkh@google.com>
+Date: Mon, 26 Oct 2020 09:09:00 +0100
+Subject: [PATCH 40/50] ANDROID: ion: fix movement of dma header file
+
+Commit 9f4df96b8781 ("dma-mapping: merge <linux/dma-noncoherent.h> into
+<linux/dma-map-ops.h>") moved the header file, so do the same thing for
+our out-of-tree ION code as well, to fix the build issues.
+
+Fixes: 9f4df96b8781 ("dma-mapping: merge <linux/dma-noncoherent.h> into <linux/dma-map-ops.h>")
+Fixes: b2117ae840bd ("ANDROID: ion: flush cache before exporting non-cached buffers")
+Cc: Vincent Donnefort <vincent.donnefort@arm.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@google.com>
+Change-Id: I20e2f47598bee9dcf311cd62b49541ebcb061fca
+---
+ drivers/staging/android/ion/ion_buffer.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/android/ion/ion_buffer.c b/drivers/staging/android/ion/ion_buffer.c
+index cbbe3d5c9..61ac23043 100644
+--- a/drivers/staging/android/ion/ion_buffer.c
++++ b/drivers/staging/android/ion/ion_buffer.c
+@@ -9,7 +9,7 @@
+ #include <linux/module.h>
+ #include <linux/slab.h>
+ #include <linux/vmalloc.h>
+-#include <linux/dma-noncoherent.h>
++#include <linux/dma-map-ops.h>
+ 
+ #define CREATE_TRACE_POINTS
+ #include "ion_trace.h"
+-- 
+2.17.1
+

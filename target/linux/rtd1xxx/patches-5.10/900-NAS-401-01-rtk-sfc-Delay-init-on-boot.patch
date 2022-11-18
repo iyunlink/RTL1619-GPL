@@ -1,0 +1,25 @@
+Index: linux-5.10.109/drivers/mtd/spi-nor/rtk-sfc.c
+===================================================================
+--- linux-5.10.109.orig/drivers/mtd/spi-nor/rtk-sfc.c
++++ linux-5.10.109/drivers/mtd/spi-nor/rtk-sfc.c
+@@ -672,7 +672,19 @@ static struct platform_driver rtk_spi_no
+ 	.probe	= rtk_spi_nor_probe,
+ 	.remove	= rtk_spi_nor_remove,
+ };
+-module_platform_driver(rtk_spi_nor_driver);
++
++//module_platform_driver(rtk_spi_nor_driver);
++static int __init rtk_sfc_init(void)
++{
++	return platform_driver_register(&rtk_spi_nor_driver);
++}
++late_initcall(rtk_sfc_init);
++
++static void __exit rtk_sfc_exit(void)
++{
++	platform_driver_unregister(&rtk_spi_nor_driver);
++}
++module_exit(rtk_sfc_exit);
+ 
+ MODULE_LICENSE("GPL v2");
+ MODULE_DESCRIPTION("Realtek SPI Nor Flash Controller Driver");

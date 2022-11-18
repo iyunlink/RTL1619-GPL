@@ -1,0 +1,38 @@
+Realtek Synchronous Serial Interface based on DesignWare SPI core.
+
+Required properties:
+- compatible : "realtek,rtk-dw-apb-ssi"
+- reg : The register base for the controller.
+    The 1st one is for DW SPI core, and the 2nd one is for wrapper.
+- interrupts : One interrupt, used by the controller.
+- #address-cells : <1>, as required by generic SPI binding.
+- #size-cells : <0>, also as required by generic SPI binding.
+- pinctrl-names : Names of pinmux set of corresponding output mode.
+- pinctrl-0 : The default pinmux set.
+- num-chipselect : The number of chipselects. It should be 1.
+- bus-num : The bus number of this SPI controller.
+- clock-frequency : The max. frequency of this SPI controller.
+- clocks : phandles for the clocks
+- resets : phandles for the resets
+
+Child nodes as per the generic SPI binding.
+
+Example:
+
+	spi_0: spi@1BD00 {
+		compatible = "realtek,rtk-dw-apb-ssi";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		interrupt-parent = <&misc_irq_mux>;
+		interrupts = <27>; /* SPI_INT */
+		reg = <0x1BD00 0x100>, /* DW SPI */
+		      <0x1B300 0x18>; /* SPI wrapper */
+		pinctrl-names = "default";
+		pinctrl-0 = <&gspi_pins_0>;
+		num-chipselect = <1>;
+		bus-num = <0>;
+		clocks = <&cc CC_CKE_GSPI>;
+		clock-frequency = <256000000>;
+		resets = <&cc CC_RSTN_GSPI>;
+	};
+

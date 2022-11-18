@@ -1,0 +1,54 @@
+/* PLEASE include this file inside a node */
+/ {
+	display_subsystem: display-subsystem {
+		compatible = "realtek,display-subsystem";
+		ports = <&vo_out>; //change this to <&vo_out_legacy> for legacy
+		status = "disabled";
+	};
+
+	vo: vo@98080000 {
+		compatible = "realtek,crtc";
+		reg = <0x98080000 0x2000>;
+		interrupts = <0 33 4>;
+		vo_out: port {
+			vo_hdmi: endpoint {
+				remote-endpoint = <&hdmi_vo>;
+			};
+		};
+	};
+
+	vo_legacy: vo_legacy@98080000 {
+		compatible = "realtek,vo";
+		vo_out_legacy: port {
+			vo_hdmi_legacy: endpoint {
+				remote-endpoint = <&hdmi_vo_legacy>;
+			};
+		};
+	};
+
+	hdmi: hdmi@9800d000 {
+		compatible = "realtek,rtk-hdmi";
+		syscon = <&hdmi_tx>, <&crt>;
+		clocks = <&cc RTD1319_CRT_CLK_EN_HDMI>;
+		clock-names = "clk_en_hdmi";
+		resets = <&cc RTD1319_CRT_RSTN_HDMI>;
+		reset-names = "rstn_hdmi";
+		hpd-gpios = <&gpio 7 GPIO_PULL_DOWN>;
+		rxsense-mode = <0>;
+		hdcp = <2>;
+		hdmi_in: port {
+			hdmi_vo: endpoint {
+				remote-endpoint = <&vo_hdmi>;
+			};
+		};
+	};
+
+	hdmi_legacy: hdmi_legacy@9800d000 {
+		compatible = "realtek,rtk-hdmi-legacy";
+		hdmi_legacy_in: port {
+			hdmi_vo_legacy: endpoint {
+				remote-endpoint = <&vo_hdmi_legacy>;
+			};
+		};
+	};
+};

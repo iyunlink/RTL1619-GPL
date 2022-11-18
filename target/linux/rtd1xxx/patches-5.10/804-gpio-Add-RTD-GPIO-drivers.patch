@@ -1,0 +1,44 @@
+From 5e68b1a4d88d1d994cc39cecc1d44cc6d4e214c2 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:05:44 +0800
+Subject: [PATCH 23/54] 804: gpio: Add RTD GPIO drivers
+
+---
+ drivers/gpio/Kconfig  | 8 ++++++++
+ drivers/gpio/Makefile | 1 +
+ 2 files changed, 9 insertions(+)
+
+diff --git a/drivers/gpio/Kconfig b/drivers/gpio/Kconfig
+index d1300fc00..94c5b337c 100644
+--- a/drivers/gpio/Kconfig
++++ b/drivers/gpio/Kconfig
+@@ -178,6 +178,14 @@ config GPIO_RASPBERRYPI_EXP
+ 	  Turn on GPIO support for the expander on Raspberry Pi 3 boards, using
+ 	  the firmware mailbox to communicate with VideoCore on BCM283x chips.
+ 
++config GPIO_RTD
++	tristate "Realtek DHC GPIO support"
++	depends on ARCH_REALTEK
++	default y
++	select GPIOLIB_IRQCHIP
++	help
++		Realtek RTD GPIO support.
++
+ config GPIO_BCM_KONA
+ 	bool "Broadcom Kona GPIO"
+ 	depends on OF_GPIO && (ARCH_BCM_MOBILE || COMPILE_TEST)
+diff --git a/drivers/gpio/Makefile b/drivers/gpio/Makefile
+index 09dada80a..0bb0e8976 100644
+--- a/drivers/gpio/Makefile
++++ b/drivers/gpio/Makefile
+@@ -124,6 +124,7 @@ obj-$(CONFIG_GPIO_RC5T583)		+= gpio-rc5t583.o
+ obj-$(CONFIG_GPIO_RCAR)			+= gpio-rcar.o
+ obj-$(CONFIG_GPIO_RDA)			+= gpio-rda.o
+ obj-$(CONFIG_GPIO_RDC321X)		+= gpio-rdc321x.o
++obj-$(CONFIG_GPIO_RTD)			+= gpio-rtd.o
+ obj-$(CONFIG_GPIO_REG)			+= gpio-reg.o
+ obj-$(CONFIG_ARCH_SA1100)		+= gpio-sa1100.o
+ obj-$(CONFIG_GPIO_SAMA5D2_PIOBU)	+= gpio-sama5d2-piobu.o
+-- 
+2.17.1
+

@@ -1,0 +1,293 @@
+From 8176290ee25bc899800235470dcd0cde8c3a7a7b Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:21:00 +0800
+Subject: [PATCH 31/54] 812: mmc: Add MMC_RTK_SDMMC
+
+---
+ drivers/mmc/core/block.c  |  4 +++
+ drivers/mmc/core/core.c   | 16 ++++++++++
+ drivers/mmc/core/sd.c     | 26 +++++++++++++++++
+ drivers/mmc/host/Kconfig  | 61 +++++++++++++++++++++++++++++++++++++++
+ drivers/mmc/host/Makefile |  6 ++++
+ drivers/mmc/host/cqhci.c  |  6 ++++
+ drivers/mmc/host/cqhci.h  |  4 +++
+ 7 files changed, 123 insertions(+)
+
+diff --git a/drivers/mmc/core/block.c b/drivers/mmc/core/block.c
+index 99b981a05..21c18e615 100644
+--- a/drivers/mmc/core/block.c
++++ b/drivers/mmc/core/block.c
+@@ -805,7 +805,9 @@ static int mmc_blk_part_switch_pre(struct mmc_card *card,
+ 			if (ret)
+ 				return ret;
+ 		}
++#if !IS_ENABLED(CONFIG_MMC_DW_CQE_RTK13XX) && !IS_ENABLED(CONFIG_MMC_DW_CQE_RTK)
+ 		mmc_retune_pause(card->host);
++#endif
+ 	}
+ 
+ 	return ret;
+@@ -817,7 +819,9 @@ static int mmc_blk_part_switch_post(struct mmc_card *card,
+ 	int ret = 0;
+ 
+ 	if (part_type == EXT_CSD_PART_CONFIG_ACC_RPMB) {
++#if !IS_ENABLED(CONFIG_MMC_DW_CQE_RTK13XX) && !IS_ENABLED(CONFIG_MMC_DW_CQE_RTK)
+ 		mmc_retune_unpause(card->host);
++#endif
+ 		if (card->reenable_cmdq && !card->ext_csd.cmdq_en)
+ 			ret = mmc_cmdq_enable(card);
+ 	}
+diff --git a/drivers/mmc/core/core.c b/drivers/mmc/core/core.c
+index eb82f6aac..0be4625bb 100644
+--- a/drivers/mmc/core/core.c
++++ b/drivers/mmc/core/core.c
+@@ -59,6 +59,10 @@ static const unsigned freqs[] = { 400000, 300000, 200000, 100000 };
+  */
+ bool use_spi_crc = 1;
+ module_param(use_spi_crc, bool, 0);
++#ifdef CONFIG_MMC_RTK_SDMMC
++void rtk_sdmmc_close_clk(struct mmc_host *host);
++int rtk_sdmmc_clk_cls_chk(struct mmc_host *host);
++#endif /* CONFIG_MMC_RTK_SDMMC */
+ 
+ static int mmc_schedule_delayed_work(struct delayed_work *work,
+ 				     unsigned long delay)
+@@ -2261,8 +2265,16 @@ void mmc_rescan(struct work_struct *work)
+ 	mmc_bus_get(host);
+ 
+ 	/* Verify a registered card to be functional, else remove it. */
++#ifdef CONFIG_MMC_RTK_SDMMC
++	if (host->bus_ops && !host->bus_dead) {
++		host->bus_ops->detect(host);
++		if(!(host->caps2 & MMC_CAP2_NO_SD))
++			rtk_sdmmc_close_clk(host);
++	}
++#else
+ 	if (host->bus_ops && !host->bus_dead)
+ 		host->bus_ops->detect(host);
++#endif /* CONFIG_MMC_RTK_SDMMC */
+ 
+ 	host->detect_change = 0;
+ 
+@@ -2310,6 +2322,10 @@ void mmc_rescan(struct work_struct *work)
+  out:
+ 	if (host->caps & MMC_CAP_NEEDS_POLL)
+ 		mmc_schedule_delayed_work(&host->detect, HZ);
++#ifdef CONFIG_MMC_RTK_SDMMC
++	if(!(host->caps2 & MMC_CAP2_NO_SD) && rtk_sdmmc_clk_cls_chk(host))
++		rtk_sdmmc_close_clk(host);
++#endif /* CONFIG_MMC_RTK_SDMMC */
+ }
+ 
+ void mmc_start_host(struct mmc_host *host)
+diff --git a/drivers/mmc/core/sd.c b/drivers/mmc/core/sd.c
+index bac343a8d..c2c8de058 100644
+--- a/drivers/mmc/core/sd.c
++++ b/drivers/mmc/core/sd.c
+@@ -26,6 +26,23 @@
+ #include "sd.h"
+ #include "sd_ops.h"
+ 
++#ifdef CONFIG_MMC_RTK_SDMMC
++
++int mmc_runtime_resume_flag=0;
++
++int get_mmc_runtime_resume_flag(void)
++{
++	return mmc_runtime_resume_flag;
++}
++EXPORT_SYMBOL(get_mmc_runtime_resume_flag);
++
++void set_mmc_runtime_resume_flag(int flag)
++{
++	mmc_runtime_resume_flag = flag;
++}
++EXPORT_SYMBOL(set_mmc_runtime_resume_flag);
++#endif /* CONFIG_MMC_RTK_SDMMC */
++
+ static const unsigned int tran_exp[] = {
+ 	10000,		100000,		1000000,	10000000,
+ 	0,		0,		0,		0
+@@ -1310,9 +1327,18 @@ static int mmc_sd_runtime_resume(struct mmc_host *host)
+ 	int err;
+ 
+ 	err = _mmc_sd_resume(host);
++
++#ifdef CONFIG_MMC_RTK_SDMMC
++	if (err && err != -ENOMEDIUM) {
++		mmc_runtime_resume_flag = 1;
++		pr_err("%s: error %d doing runtime resume\n",
++			mmc_hostname(host), err);
++	}
++#else
+ 	if (err && err != -ENOMEDIUM)
+ 		pr_err("%s: error %d doing runtime resume\n",
+ 			mmc_hostname(host), err);
++#endif /* CONFIG_MMC_RTK_SDMMC */
+ 
+ 	return 0;
+ }
+diff --git a/drivers/mmc/host/Kconfig b/drivers/mmc/host/Kconfig
+index 30ff42fd1..52fa3e9f5 100644
+--- a/drivers/mmc/host/Kconfig
++++ b/drivers/mmc/host/Kconfig
+@@ -202,6 +202,24 @@ config MMC_SDHCI_OF_HLWD
+ 
+ 	  If unsure, say N.
+ 
++config MMC_SDHCI_OF_RTK
++	tristate "SDHCI OF support for the Realtek SoC SDHCI controller"
++	depends on MMC_SDHCI_PLTFM
++	depends on OF
++	select MMC_SDHCI_IO_ACCESSORS
++	help
++	  This selects the Secure Digital Host Controller Interface in
++	  Realtek SoCs.
++
++	  If you have a controller with this interface, say Y or M here.
++
++	  If unsure, say N.
++
++config MMC_SDHCI_OF_RTKSTB
++	tristate "SDHCI OF support for the Realtek DHC STB SoC"
++	help
++	 Realtek SD/MMC host controller support.
++
+ config MMC_SDHCI_OF_DWCMSHC
+ 	tristate "SDHCI OF support for the Synopsys DWC MSHC"
+ 	depends on MMC_SDHCI_PLTFM
+@@ -812,6 +825,29 @@ config MMC_DW_PLTFM
+ 
+ 	  If unsure, say Y.
+ 
++config MMC_DW_CQE
++	tristate "Synopsys DesignWare Memory Card with CQE Interface"
++	depends on ARC || ARM || ARM64 || MIPS || COMPILE_TEST
++	select MMC_CQHCI
++	help
++	  This selects support for the Synopsys DesignWare Mobile Storage IP
++	  block, this provides host support for SD and MMC interfaces, in both
++	  PIO, internal DMA mode and external DMA mode.
++
++config MMC_DW_CQE_PLTFM
++	tristate "Synopsys Designware MCI with CQE Support as platform device"
++	depends on MMC_DW_CQE
++	default y
++	help
++	  This selects the common helper functions support for Host Controller
++	  Interface based platform driver. Please select this option if the IP
++	  is present as a platform device. This is the common interface for the
++	  Synopsys Designware IP.
++
++	  If you have a controller with this interface, say Y or M here.
++
++	  If unsure, say Y.
++
+ config MMC_DW_BLUEFIELD
+ 	tristate "BlueField specific extensions for Synopsys DW Memory Card Interface"
+ 	depends on MMC_DW
+@@ -951,6 +987,11 @@ config MMC_WMT
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called wmt-sdmmc.
+ 
++config MMC_RTK_SDMMC
++	tristate "Realtek SD/MMC host controller support"
++	help
++	  Realtek SD/MMC host controller support.
++
+ config MMC_USDHI6ROL0
+ 	tristate "Renesas USDHI6ROL0 SD/SDIO Host Controller support"
+ 	depends on HAS_DMA
+@@ -1099,5 +1140,25 @@ config MMC_OWL
+ 	  This selects support for the SD/MMC Host Controller on
+ 	  Actions Semi Owl SoCs.
+ 
++config MMC_DW_CQE_RTK13XX
++	tristate "Realtek RTD13XX specific extensions for Synopsys DW Memory Card Interface"
++	depends on MMC_DW_CQE
++	select MMC_DW_CQE_PLTFM
++	select REGULATOR_FIXED_VOLTAGE
++	help
++	  This selects support for Realtek SoC specific extensions to the
++	  Synopsys DesignWare Memory Card Interface driver. Select this option
++	  for platforms based on RTD16xx SoC's.
++
++config MMC_DW_CQE_RTK
++	tristate "Realtek Soc's specific extensions for Synopsys DW Memory Card Interface After Stark"
++	depends on MMC_DW_CQE
++	select MMC_DW_CQE_PLTFM
++	select REGULATOR_FIXED_VOLTAGE
++	help
++	  This selects support for Realtek SoC specific extensions to the
++	  Synopsys DesignWare Memory Card Interface driver. Select this option
++	  for platforms after RTD16xxb SoC's.
++
+ config MMC_SDHCI_EXTERNAL_DMA
+ 	bool
+diff --git a/drivers/mmc/host/Makefile b/drivers/mmc/host/Makefile
+index 451c25fc2..4498a3bc4 100644
+--- a/drivers/mmc/host/Makefile
++++ b/drivers/mmc/host/Makefile
+@@ -78,6 +78,7 @@ obj-$(CONFIG_MMC_TOSHIBA_PCI)	+= toshsd.o
+ obj-$(CONFIG_MMC_BCM2835)	+= bcm2835.o
+ obj-$(CONFIG_MMC_OWL)		+= owl-mmc.o
+ 
++obj-$(CONFIG_MMC_RTK_SDMMC)	+= rtk-sdmmc.o
+ obj-$(CONFIG_MMC_REALTEK_PCI)	+= rtsx_pci_sdmmc.o
+ obj-$(CONFIG_MMC_REALTEK_USB)	+= rtsx_usb_sdmmc.o
+ 
+@@ -95,6 +96,8 @@ obj-$(CONFIG_MMC_SDHCI_OF_ESDHC)	+= sdhci-of-esdhc.o
+ obj-$(CONFIG_MMC_SDHCI_OF_HLWD)		+= sdhci-of-hlwd.o
+ obj-$(CONFIG_MMC_SDHCI_OF_DWCMSHC)	+= sdhci-of-dwcmshc.o
+ obj-$(CONFIG_MMC_SDHCI_OF_SPARX5)	+= sdhci-of-sparx5.o
++obj-$(CONFIG_MMC_SDHCI_OF_RTK)		+= sdhci-rtk.o
++obj-$(CONFIG_MMC_SDHCI_OF_RTKSTB)	+= sdhci-of-rtkstb.o
+ obj-$(CONFIG_MMC_SDHCI_BCM_KONA)	+= sdhci-bcm-kona.o
+ obj-$(CONFIG_MMC_SDHCI_IPROC)		+= sdhci-iproc.o
+ obj-$(CONFIG_MMC_SDHCI_MSM)		+= sdhci-msm.o
+@@ -105,6 +107,10 @@ obj-$(CONFIG_MMC_SDHCI_OMAP)		+= sdhci-omap.o
+ obj-$(CONFIG_MMC_SDHCI_SPRD)		+= sdhci-sprd.o
+ obj-$(CONFIG_MMC_CQHCI)			+= cqhci.o
+ obj-$(CONFIG_MMC_HSQ)			+= mmc_hsq.o
++obj-$(CONFIG_MMC_DW_CQE)        	+= dw_mmc_cqe.o
++obj-$(CONFIG_MMC_DW_CQE_PLTFM)  	+= dw_mmc_cqe-pltfm.o
++obj-$(CONFIG_MMC_DW_CQE_RTK13XX)	+= dw_mmc_cqe-rtk13xx.o
++obj-$(CONFIG_MMC_DW_CQE_RTK)		+= dw_mmc_cqe-rtk.o
+ 
+ ifeq ($(CONFIG_CB710_DEBUG),y)
+ 	CFLAGS-cb710-mmc	+= -DDEBUG
+diff --git a/drivers/mmc/host/cqhci.c b/drivers/mmc/host/cqhci.c
+index 7ba4f7141..7953d628c 100644
+--- a/drivers/mmc/host/cqhci.c
++++ b/drivers/mmc/host/cqhci.c
+@@ -494,6 +494,12 @@ static int cqhci_prep_tran_desc(struct mmc_request *mrq,
+ 
+ 	desc = get_trans_desc(cq_host, tag);
+ 
++#ifdef CONFIG_MMC_DW_CQE
++	if (cq_host->ops->setup_tran_desc) {
++		cq_host->ops->setup_tran_desc(data, cq_host, desc, sg_count);
++		return 0;
++	}
++#endif
+ 	for_each_sg(data->sg, sg, sg_count, i) {
+ 		addr = sg_dma_address(sg);
+ 		len = sg_dma_len(sg);
+diff --git a/drivers/mmc/host/cqhci.h b/drivers/mmc/host/cqhci.h
+index 89bf6adbc..38dfe83f2 100644
+--- a/drivers/mmc/host/cqhci.h
++++ b/drivers/mmc/host/cqhci.h
+@@ -208,6 +208,10 @@ struct cqhci_host_ops {
+ 				 u64 *data);
+ 	void (*pre_enable)(struct mmc_host *mmc);
+ 	void (*post_disable)(struct mmc_host *mmc);
++#ifdef CONFIG_MMC_DW_CQE
++	void (*setup_tran_desc)(struct mmc_data *data,
++		struct cqhci_host *cq_host, u8 *desc, int sg_count);
++#endif
+ };
+ 
+ static inline void cqhci_writel(struct cqhci_host *host, u32 val, int reg)
+-- 
+2.17.1
+

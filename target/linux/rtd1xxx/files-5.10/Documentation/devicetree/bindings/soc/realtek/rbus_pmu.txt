@@ -1,0 +1,20 @@
+Realtek Rbus PMU dt-bindings
+============================
+
+Required properties:
+- compatible:
+        "realtek,rtk-16xxb-rbus-pmu" for rtd16xxb family
+- reg: address range of Rbus PMU
+
+Optional properties:
+- overflow: indicating the PMU has overflow interrupt
+
+Example:
+
+	rbus-pmu: rtk-rbus-pmu@1af00 {
+		compatible = "realtek,rtk-16xxb-rbus-pmu";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x0 0x1af00 0x0 0x0080>;
+		overflow = <1>;
+	};

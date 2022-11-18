@@ -1,0 +1,18 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2020 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd1619b-backinblack.dtsi"
+
+/ {
+	compatible = "realtek,back-in-black", "realtek,rtd1619b";
+	model = "Realtek Back in Black EVB (2GB)";
+
+	memory@40000 {
+		device_type = "memory";
+		reg = <0x00040000 0x7ffc0000>; /* 2 GB */
+	};
+};

@@ -1,0 +1,42 @@
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (c) 2019-2021 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd16xxb-rescue.dtsi"
+
+/ {
+	model = "Realtek RTD1619B Rescue";
+
+	memory@40000 {
+		device_type = "memory";
+		reg = <0x00040000 0x3ffc0000>; /* 1 GiB */
+	};
+};
+
+&emmc {
+	status = "disabled";
+};
+
+&nand {
+	status = "okay";
+};
+
+&pcie1 {
+	status = "disabled";
+};
+
+&pcie1_phy {
+	status = "disabled";
+};
+
+&pcie2 {
+	status = "disabled";
+};
+
+&pcie2_phy {
+	status = "disabled";
+};
+

@@ -1,0 +1,89 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2019-2020 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd16xxb.dtsi"
+
+/ {
+	model = "Realtek Rescue";
+
+	memory@4000 {
+		device_type = "memory";
+		reg = <0x00004000 0x7fffc000>; /* boot ROM to 1 GiB or 2 GiB */
+	};
+
+	chosen {
+		linux,initrd-start = <0x03100000>;
+		linux,initrd-end = <0x03d00000>;
+	};
+};
+
+/* debug console (J1) */
+&uart0 {
+	status = "okay";
+};
+
+&gpio {
+	status = "okay";
+};
+
+&usb_manager {
+	status = "okay";
+
+	gpio0 {
+		realtek,power-gpio = <&gpio 48 GPIO_ACTIVE_HIGH>;
+		power_low_active;
+	};
+
+	gpio1 {
+		realtek,power-gpio = <&gpio 49 GPIO_ACTIVE_HIGH>;
+		power_low_active;
+	};
+
+	rtk_usb {
+		type_c {
+			realtek,plug_side_switch-gpio = <&gpio 53 GPIO_ACTIVE_HIGH>;
+		};
+	};
+};
+
+&usb_port0_usb2phy {
+	status = "okay";
+};
+
+&usb_port0 {
+	status = "okay";
+};
+
+&usb_port1_usb2phy {
+	status = "okay";
+};
+
+&usb_port1 {
+	status = "okay";
+};
+
+&usb_port2_usb2phy {
+	status = "okay";
+};
+
+&usb_port2_usb3phy {
+	status = "okay";
+};
+
+&usb_port2 {
+	status = "okay";
+};
+
+&type_c {
+	status = "okay";
+
+	dwc3_rtk = <&usb_port2>;
+};
+
+&nic {
+	status = "okay";
+};

@@ -1,0 +1,39 @@
+From e538ad69ebe04f91f734ab643402f76dd59c372f Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 15:31:21 +0800
+Subject: rtk_ve/ve1/ve1.c: Fix memcpy read out of range
+
+---
+ drivers/soc/realtek/rtd13xx/rtk_ve/ve1/ve1.c  | 2 +-
+ drivers/soc/realtek/rtd16xxb/rtk_ve/ve1/ve1.c | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/soc/realtek/rtd13xx/rtk_ve/ve1/ve1.c b/drivers/soc/realtek/rtd13xx/rtk_ve/ve1/ve1.c
+index 49137ddf7..dd603765c 100644
+--- a/drivers/soc/realtek/rtd13xx/rtk_ve/ve1/ve1.c
++++ b/drivers/soc/realtek/rtd13xx/rtk_ve/ve1/ve1.c
+@@ -456,7 +456,7 @@ static int vpu_free_instances(struct file *filp)
+ 				if (vdi_mutexes_base) {
+ 					int i;
+ 					for (i = 0; i < 4; i++) {
+-						memcpy(vdi_mutexes_base, &PTHREAD_MUTEX_T_DESTROY_VALUE, PTHREAD_MUTEX_T_HANDLE_SIZE);
++						memcpy(vdi_mutexes_base, &PTHREAD_MUTEX_T_DESTROY_VALUE, sizeof(PTHREAD_MUTEX_T_DESTROY_VALUE));
+ 						vdi_mutexes_base += PTHREAD_MUTEX_T_HANDLE_SIZE;
+ 					}
+ 				}
+diff --git a/drivers/soc/realtek/rtd16xxb/rtk_ve/ve1/ve1.c b/drivers/soc/realtek/rtd16xxb/rtk_ve/ve1/ve1.c
+index 2faaab8e6..f9be01b3f 100755
+--- a/drivers/soc/realtek/rtd16xxb/rtk_ve/ve1/ve1.c
++++ b/drivers/soc/realtek/rtd16xxb/rtk_ve/ve1/ve1.c
+@@ -395,7 +395,7 @@ static int vpu_free_instances(struct file *filp)
+ 				if (vdi_mutexes_base) {
+ 					int i;
+ 					for (i = 0; i < 4; i++) {
+-						memcpy(vdi_mutexes_base, &PTHREAD_MUTEX_T_DESTROY_VALUE, PTHREAD_MUTEX_T_HANDLE_SIZE);
++						memcpy(vdi_mutexes_base, &PTHREAD_MUTEX_T_DESTROY_VALUE, sizeof(PTHREAD_MUTEX_T_DESTROY_VALUE));
+ 						vdi_mutexes_base += PTHREAD_MUTEX_T_HANDLE_SIZE;
+ 					}
+ 				}
+-- 
+2.17.1
+

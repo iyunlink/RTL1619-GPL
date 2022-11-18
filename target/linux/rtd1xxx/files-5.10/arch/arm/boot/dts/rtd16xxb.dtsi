@@ -1,0 +1,530 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Realtek RTD1619b SoC family
+ *
+ * Copyright (c) 2020 Realtek Semiconductor Corp.
+ */
+
+#include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/interrupt-controller/irq.h>
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/clock/rtd1619b-clk.h>
+#include <dt-bindings/reset/rtd1619b-reset.h>
+#include <dt-bindings/power/rtd1619b-power.h>
+
+/ {
+	interrupt-parent = <&gic>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		watchdog0 = &watchdog;
+	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		protected_mem: protected_mem@4000 {
+			reg = <0x00004000 0x1000000>;
+			no-map;
+		};
+
+		rpc_comm: comm@4080000 {
+			compatible = "comm";
+			reg = <0x04080000 0x1000>;
+		};
+
+		rpc_ringbuf: ringbuf@40ff000 {
+			compatible = "ringbuf";
+			reg = <0x040ff000 0x4000>;
+		};
+
+		audio_heap: audio_heap@4200000 {
+			compatible = "audio_heap";
+			reg = <0x04200000 0xc00000>;
+		};
+
+		media_heap: media_heap@4e00000 {
+			compatible = "media_heap";
+			reg = <0x04e00000 0xb000000>;
+		};
+
+		hifi: hifi@fe00000 {
+			reg = <0x0fe00000 0x200000>;
+			no-map;
+		};
+
+		tee: tee@10100000 {
+			reg = <0x10100000 0x04100000>;
+			no-map;
+		};
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu0: cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x0>;
+			enable-method = "psci";
+			next-level-cache = <&l2>;
+		};
+
+		cpu1: cpu@100 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x100>;
+			enable-method = "psci";
+			next-level-cache = <&l2>;
+		};
+
+		cpu2: cpu@200 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x200>;
+			enable-method = "psci";
+			next-level-cache = <&l2>;
+		};
+
+		cpu3: cpu@300 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a55";
+			reg = <0x300>;
+			enable-method = "psci";
+			next-level-cache = <&l2>;
+		};
+
+		l2: l2-cache {
+			compatible = "cache";
+			next-level-cache = <&l3>;
+
+		};
+
+		l3: l3-cache {
+			compatible = "cache";
+		};
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <GIC_PPI 13 IRQ_TYPE_LEVEL_LOW>,
+			     <GIC_PPI 14 IRQ_TYPE_LEVEL_LOW>,
+			     <GIC_PPI 11 IRQ_TYPE_LEVEL_LOW>,
+			     <GIC_PPI 10 IRQ_TYPE_LEVEL_LOW>,
+			     <GIC_PPI 9 IRQ_TYPE_LEVEL_LOW>;
+	};
+
+	arm_pmu: pmu {
+		compatible = "arm,armv8-pmuv3";
+		interrupts = <GIC_PPI 7 IRQ_TYPE_LEVEL_LOW>;
+		interrupt-affinity = <&cpu0>, <&cpu1>, <&cpu2>, <&cpu3>;
+	};
+
+	psci {
+		compatible = "arm,psci-1.0";
+		method = "smc";
+	};
+
+	osc27m: osc {
+		compatible = "fixed-clock";
+		clock-frequency = <27000000>;
+		clock-output-names = "osc27m";
+		#clock-cells = <0>;
+	};
+
+	buadclk: buadclk {
+		compatible = "fixed-clock";
+		#clock-cells = <0>;
+		clock-frequency = <432000000>;
+		clock-output-names = "buadclk";
+	};
+
+	soc@0 {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges = <0x00000000 0x00000000 0x00040000>, /* boot code */
+			 <0xff100000 0xff100000 0x00200000>, /* GIC */
+			 <0x98000000 0x98000000 0x00200000>; /* rbus */
+
+		rbus: rbus@98000000 {
+			compatible = "simple-bus";
+			reg = <0x98000000 0x200000>;
+			#address-cells = <1>;
+			#size-cells = <1>;
+			ranges = <0x0 0x98000000 0x200000>;
+
+			crt: syscon@0 {
+				compatible = "realtek,rtd1619b-crt", "syscon", "simple-mfd";
+				reg = <0x0 0x1000>;
+				reg-io-width = <4>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				ranges = <0x0 0x0 0x1000>;
+			};
+
+			pinctrl: pinctrl@4e000 {
+				compatible = "realtek,rtd16xxb-pinctrl", "syscon";
+				reg = <0x4e000 0x130>;
+				#gpio-range-cells = <3>;
+			};
+
+			iso: syscon@7000 {
+				compatible = "syscon", "simple-mfd";
+				reg = <0x7000 0x1000>;
+				reg-io-width = <4>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				ranges = <0x0 0x7000 0x1000>;
+			};
+
+			usb_manager: rtk_usb_manager {
+				compatible = "realtek,usb-manager";
+				#address-cells = <1>;
+				#size-cells = <1>;
+				ranges;
+			};
+
+			efuse: efuse@17000 {
+				compatible = "realtek,rtd1619-otp";
+				reg = <0x17000 0x1000>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				read-only;
+			};
+
+			sb2: syscon@1a000 {
+				compatible = "syscon", "simple-mfd";
+				reg = <0x1a000 0x1000>;
+				reg-io-width = <4>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				ranges = <0x0 0x1a000 0x1000>;
+			};
+
+			misc: syscon@1b000 {
+				compatible = "syscon", "simple-mfd";
+				reg = <0x1b000 0x1000>;
+				reg-io-width = <4>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				ranges = <0x0 0x1b000 0x1000>;
+			};
+
+			sbx: syscon@1c000 {
+				compatible = "syscon", "simple-mfd";
+				reg = <0x1c000 0x1000>;
+				reg-io-width = <4>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				ranges = <0x0 0x1c000 0x1000>;
+			};
+
+			scpu_wrapper: syscon@1d000 {
+				compatible = "syscon", "simple-mfd";
+				reg = <0x1d000 0x1000>;
+				reg-io-width = <4>;
+				#address-cells = <1>;
+				#size-cells = <1>;
+				ranges = <0x0 0x1d000 0x1000>;
+			};
+
+			npu: npu-wrapper@85000 {
+				reg = <0x85000 0x2000>;
+				compatible = "realtek,npu-wrapper";
+				power-domains = <&pd RTD1619B_PD_NPU>, <&pd RTD1619B_PD_NPU_SRAM>;
+				interrupts = <GIC_SPI 102 IRQ_TYPE_LEVEL_HIGH>;
+				clocks = <&cc RTD1619B_CRT_CLK_NPU>,
+				         <&cc RTD1619B_CRT_CLK_EN_NPU>;
+				clock-names = "clk_npu", "clk_en_npu";
+				resets = <&cc RTD1619B_CRT_RSTN_SOFT_NPU>,
+				         <&cc RTD1619B_CRT_RSTN_NPU_BIST>;
+				reset-names = "soft_npu", "npu_bist";
+				contiguousSize = <0x0 0x1000000>;
+				status = "disabled";
+			};
+
+			nic: r8169soc@16000 {
+				compatible = "realtek,rtd16xxb-r8169soc";
+				reg = <0x16000 0x1000>;   /* ETN */
+				realtek,iso = <&iso>;
+				realtek,pinctrl = <&pinctrl>;
+				interrupts = <0 22 4>;
+				pinctrl-names = "default";
+				pinctrl-0 = <&etn_led_pins>;
+				local-mac-address = [00 10 20 30 40 50];
+				wol-enable = <0>;
+				output-mode = <0>; /* 0:embedded PHY */
+				acp = <0>; /* 0: disable */
+				eee = <1>; /* 0: disable, 1: enable */
+				clocks = <&ic RTD1619B_ISO_CLK_EN_ETN_250M>,
+					 <&ic RTD1619B_ISO_CLK_EN_ETN_SYS>;
+				clock-names = "etn_250m",
+					      "etn_sys";
+				resets = <&ic RTD1619B_ISO_RSTN_GMAC>,
+					 <&ic RTD1619B_ISO_RSTN_GPHY>;
+				reset-names = "gmac",
+					      "gphy";
+				nvmem-cells = <&otp_etn_rc_r_amp_cal>;
+				nvmem-cell-names = "rc_r_amp_cal";
+				status = "disabled";
+
+				phy_0 {
+					interrupt-parent = <&iso_irq_mux>;
+					interrupts = <28>, <29>, <30>;
+					irq-mask = <0x70000000>;
+					por-xv-mask = <0x00000111>;
+				};
+			};
+
+			spi_0: spi@1bd00 {
+				compatible = "realtek,rtk-dw-apb-ssi";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				interrupt-parent = <&misc_irq_mux>;
+				interrupts = <27>; /* SPI_INT */
+				reg = <0x1bd00 0x100>, /* DW SPI */
+				      <0x1b300 0x18>; /* SPI wrapper */
+				pinctrl-names = "default";
+				pinctrl-0 = <&gspi_pins_0>;
+				num-chipselect = <1>;
+				bus-num = <0>;
+				clocks = <&cc RTD1619B_CRT_CLK_EN_GSPI>;
+				clock-frequency = <256000000>;
+				resets = <&cc RTD1619B_CRT_RSTN_GSPI>;
+				status = "disabled";
+			};
+
+			spi_1: spi@7500 {
+				compatible = "realtek,rtk-dw-apb-ssi";
+				#address-cells = <1>;
+				#size-cells = <0>;
+				interrupt-parent = <&iso_irq_mux>;
+				interrupts = <6>; /* SPI1_INT */
+				reg = <0x7500 0x100>, /* DW SPI */
+				      <0x72e4 0x1c>; /* SPI wrapper */
+				pinctrl-names = "default";
+				pinctrl-0 = <&iso_gspi_pins_0>;
+				num-chipselect = <1>;
+				bus-num = <0>;
+				clock-frequency = <256000000>;
+				clocks = <&ic RTD1619B_ISO_CLK_EN_ISO_GSPI>;
+				resets = <&ic RTD1619B_ISO_RSTN_ISO_GSPI>;
+				status = "disabled";
+			};
+
+			pwm: pwm@70d0 {
+				compatible = "realtek,rtk-pwm";
+				#pwm-cells = <2>;
+				reg = <0x70d0 0xc>;
+				realtek,iso = <&iso>;
+				status = "disabled";
+
+				pwm_0 {
+					enable = <0>;
+					clkout_div = <0xff>; /* default OCD: from 0x0 to 0xff */
+					clksrc_div = <0x1>; /* default OSD: from 0x0 to 0xf */
+					duty_rate = <50>; /* default duty_rate 0 ~ 100 */
+				};
+
+				pwm_1 {
+					enable = <0>;
+					clkout_div = <0xff>; /* default OCD: from 0x0 to 0xff */
+					clksrc_div = <0x1>; /* default OSD: from 0x0 to 0xf */
+					duty_rate = <50>; /* default duty_rate 0 ~ 100 */
+				};
+
+				pwm_2 {
+					enable = <0>;
+					clkout_div = <0xff>; /* default OCD: from 0x0 to 0xff */
+					clksrc_div = <0x1>; /* default OSD: from 0x0 to 0xf */
+					duty_rate = <50>; /* default duty_rate 0 ~ 100 */
+				};
+
+				pwm_3 {
+					enable = <0>;
+					clkout_div = <0xff>; /* default OCD: from 0x0 to 0xff */
+					clksrc_div = <0x1>; /* default OSD: from 0x0 to 0xf */
+					duty_rate = <50>; /* default duty_rate 0 ~ 100 */
+				};
+			};
+
+			lsadc: lsadc@7900 {
+				compatible = "realtek,rtk-lsadc0";
+				interrupt-parent =  <&iso_irq_mux>;
+				interrupts = <3>; /* LSADC0_INT */
+				reg = <0x7900 0x200>, /* LSADC */
+				      <0x34c 0x4>; /* LSADC_PG */
+				clk_gating_en = <1>; /* LSADC0 0:disable; 1:enable */
+				debounce0_cnt = <8>; /* debounce cnt : 0 ~ 15 */
+				clocks = <&ic RTD1619B_ISO_CLK_EN_LSADC>;
+				resets = <&ic RTD1619B_ISO_RSTN_LSADC>;
+				status = "disabled";
+
+				lsadc0-pad0 {
+					activate = <1>; /* 0:in-activate; 1:activate */
+					ctrl_mode = <0>; /* 0:Voltage mode; 1:Current mode*/
+					sw_idx = <0>; /* 0:External input pin 0; 1:External input pin 1 */
+					voltage_threshold = <4>; /* 8 bits : 0 ~ 255 */
+					adc_val_baseline = <255>; /* 8 bits : 0 ~ 255 */
+				};
+
+				lsadc0-pad1 {
+					activate = <1>; /* 0:in-activate; 1:activate */
+					ctrl_mode = <0>; /* 0:Voltage mode; 1:Current mode*/
+					sw_idx = <1>; /* 0:External input pin 0; 1:External input pin 1 */
+					voltage_threshold = <255>; /* 8 bits : 0 ~ 255 */
+					adc_val_baseline = <255>; /* 8 bits : 0 ~ 255 */
+				};
+			};
+		};
+
+		gic: interrupt-controller@ff100000 {
+			compatible = "arm,gic-v3";
+			#address-cells = <1>;
+			#size-cells = <1>;
+			reg = <0xff100000 0x10000>,
+			      <0xff140000 0x80000>;
+			interrupts = <GIC_PPI 9 IRQ_TYPE_LEVEL_HIGH>;
+			interrupt-controller;
+			#interrupt-cells = <3>;
+		};
+	};
+
+	info-pll {
+		compatible = "realtek,rtd161xb-pll-info";
+		realtek,crt = <&crt>;
+		realtek,scpu-wrapper = <&scpu_wrapper>;
+	};
+
+};
+
+&crt {
+	cc: clock-controller {
+		compatible = "realtek,rtd1619b-crt-clk";
+		#clock-cells = <1>;
+		#reset-cells = <1>;
+		realtek,sb2-lock = <&sb2_lock0>;
+	};
+};
+
+&iso {
+	ic: clock-controller {
+		compatible = "realtek,rtd1619b-iso-clk";
+		#clock-cells = <1>;
+		#reset-cells = <1>;
+	};
+
+	pd: power-domain {
+		compatible = "realtek,rtd1619b-power";
+		#power-domain-cells = <1>;
+	};
+
+	iso_irq_mux: iso_irq_mux {
+		compatible = "realtek,rtd16xxb-iso-irq-mux";
+		syscon = <&iso>;
+		interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-controller;
+		#interrupt-cells = <1>;
+	};
+
+	uart0: serial0@800 {
+		compatible = "snps,dw-apb-uart";
+		reg = <0x800 0x400>;
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		interrupts = <GIC_SPI 68 IRQ_TYPE_LEVEL_HIGH>;
+		clock-frequency = <432000000>;
+		clock-names = "buadclk", "apb_pclk";
+		clocks = <&buadclk>, <&ic RTD1619B_ISO_CLK_EN_MISC_UR0>;
+		resets = <&ic RTD1619B_ISO_RSTN_UR0>;
+		status = "disabled";
+	};
+
+	gpio: gpio@100 {
+		compatible = "realtek,gpio";
+		reg = <0x100 0x100>,
+			<0x0 0xB0>;
+		syscon = <&iso>;
+		realtek,gpio_base = <0>;
+		realtek,gpio_numbers = <82>;
+		interrupt-parent = <&iso_irq_mux>;
+		#interrupt-cells = <1>;
+		interrupt-controller;
+		interrupts = <19>, <20>;
+		gpio-ranges = <&pinctrl 0 0 82>;
+		gpio-controller;
+		#gpio-cells = <2>;
+		status = "disabled";
+	};
+
+	watchdog: watchdog@a20 {
+		compatible = "realtek,rtd1619b-watchdog";
+		reg = <0xa20 0x10>, <0xa30 0x8>;
+		interrupts = <GIC_SPI 0 IRQ_TYPE_LEVEL_HIGH>;
+		timeout-sec = <20>;
+		syscon = <&iso>;
+		rst-oe-for-init = <1>;
+		rst-oe = <0>;
+		status = "disabled";
+	};
+};
+
+&sb2 {
+	chip: chip-info@200 {
+		compatible = "realtek,soc-chip";
+		reg = <0x200 0x8>;
+	};
+
+	sb2_lock0: sb2-lock@0 {
+		compatible = "realtek,sb2-sem";
+		reg = <0x0 0x4>;
+	};
+};
+
+&misc {
+	uart1: serial1@200 {
+		compatible = "snps,dw-apb-uart";
+		reg = <0x200 0x400>;
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		interrupts = <GIC_SPI 89 IRQ_TYPE_LEVEL_HIGH>;
+		clock-frequency = <432000000>;
+		clock-names = "buadclk", "apb_pclk";
+		clocks = <&buadclk>, <&cc RTD1619B_CRT_CLK_EN_UR1>;
+		resets = <&cc RTD1619B_CRT_RSTN_UR1>;
+		status = "disabled";
+	};
+
+	misc_irq_mux: misc_irq_mux {
+		compatible = "realtek,rtd16xxb-misc-irq-mux";
+		syscon = <&misc>;
+		interrupts = <GIC_SPI 40 IRQ_TYPE_LEVEL_HIGH>;
+		interrupt-controller;
+		#interrupt-cells = <1>;
+	};
+
+	uart2: serial2@400 {
+		compatible = "snps,dw-apb-uart";
+		reg = <0x400 0x400>;
+		reg-shift = <2>;
+		reg-io-width = <4>;
+		interrupts = <GIC_SPI 90 IRQ_TYPE_LEVEL_HIGH>;
+		clock-frequency = <432000000>;
+		clock-names = "buadclk", "apb_pclk";
+		clocks = <&buadclk>, <&cc RTD1619B_CRT_CLK_EN_UR2>;
+		resets = <&cc RTD1619B_CRT_RSTN_UR2>;
+		status = "disabled";
+	};
+};
+
+#include "rtd16xxb-efuse.dtsi"
+#include "rtd16xxb-pinctrl.dtsi"
+#include "rtd16xxb-usb.dtsi"

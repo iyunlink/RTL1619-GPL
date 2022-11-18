@@ -1,0 +1,54 @@
+From 8fd386edf01c5b32289ab538922b837c15dffb1a Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:22:57 +0800
+Subject: [PATCH 11/54] 401: mtd: spi-nor: Add SPI_RTK_SFC
+
+---
+ arch/arm64/boot/dts/realtek/rtd16xxb-rescue.dtsi | 4 ++++
+ drivers/mtd/spi-nor/Kconfig                      | 7 +++++++
+ drivers/mtd/spi-nor/Makefile                     | 3 ++-
+ 3 files changed, 13 insertions(+), 1 deletion(-)
+
+Index: linux-5.10.109/arch/arm64/boot/dts/realtek/rtd16xxb-rescue.dtsi
+===================================================================
+--- linux-5.10.109.orig/arch/arm64/boot/dts/realtek/rtd16xxb-rescue.dtsi
++++ linux-5.10.109/arch/arm64/boot/dts/realtek/rtd16xxb-rescue.dtsi
+@@ -93,6 +93,10 @@
+ 	status = "okay";
+ };
+ 
++&sfc {
++	status = "okay";
++};
++
+ &cp {
+ 	status = "okay";
+ };
+Index: linux-5.10.109/drivers/mtd/spi-nor/Kconfig
+===================================================================
+--- linux-5.10.109.orig/drivers/mtd/spi-nor/Kconfig
++++ linux-5.10.109/drivers/mtd/spi-nor/Kconfig
+@@ -47,4 +47,11 @@ config MTD_SPI_NOR_USE_4K_SECTORS_LIMIT
+ 
+ source "drivers/mtd/spi-nor/controllers/Kconfig"
+ 
++config SPI_RTK_SFC
++	tristate "Realtek SPI-NOR Flash Controller(SFC)"
++	depends on ARCH_REALTEK
++	depends on HAS_IOMEM && HAS_DMA
++	help
++	  This enables support for Realtek SPI-NOR flash controller.
++
+ endif # MTD_SPI_NOR
+Index: linux-5.10.109/drivers/mtd/spi-nor/Makefile
+===================================================================
+--- linux-5.10.109.orig/drivers/mtd/spi-nor/Makefile
++++ linux-5.10.109/drivers/mtd/spi-nor/Makefile
+@@ -19,5 +19,6 @@ spi-nor-objs			+= xilinx.o
+ spi-nor-objs			+= xmc.o
+ spi-nor-objs			+= xtx.o
+ obj-$(CONFIG_MTD_SPI_NOR)	+= spi-nor.o
+-
+ obj-$(CONFIG_MTD_SPI_NOR)	+= controllers/
++obj-$(CONFIG_SPI_RTK_SFC)       += rtk-sfc.o
++

@@ -1,0 +1,42 @@
+From efcb2fb55d838121dceaff6e7246019c6c65bd41 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:26:02 +0800
+Subject: [PATCH 32/54] 813: nvmem: Add RTK_EFUSE
+
+---
+ drivers/nvmem/Kconfig  | 10 ++++++++++
+ drivers/nvmem/Makefile |  2 ++
+ 2 files changed, 12 insertions(+)
+
+diff --git a/drivers/nvmem/Kconfig b/drivers/nvmem/Kconfig
+index 954d3b4a5..4ee9f7f5b 100644
+--- a/drivers/nvmem/Kconfig
++++ b/drivers/nvmem/Kconfig
+@@ -270,4 +270,14 @@ config SPRD_EFUSE
+ 	  This driver can also be built as a module. If so, the module
+ 	  will be called nvmem-sprd-efuse.
+ 
++config RTK_EFUSE
++	tristate "Realtek SoCs eFuse support"
++	depends on ARCH_REALTEK || COMPILE_TEST
++	depends on HAS_IOMEM
++	help
++	  This is a driver to access specific data from eFuse
++
++	  This driver can also be built as a module. If so, the module
++	  will be called efuse-rtk.
++
+ endif
+diff --git a/drivers/nvmem/Makefile b/drivers/nvmem/Makefile
+index a7c377218..0e1a6e1d0 100644
+--- a/drivers/nvmem/Makefile
++++ b/drivers/nvmem/Makefile
+@@ -55,3 +55,5 @@ obj-$(CONFIG_NVMEM_ZYNQMP)	+= nvmem_zynqmp_nvmem.o
+ nvmem_zynqmp_nvmem-y		:= zynqmp_nvmem.o
+ obj-$(CONFIG_SPRD_EFUSE)	+= nvmem_sprd_efuse.o
+ nvmem_sprd_efuse-y		:= sprd-efuse.o
++obj-$(CONFIG_RTK_EFUSE)         += nvmem_rtk-efuse.o
++nvmem_rtk-efuse-y		:= rtk-efuse.o
+-- 
+2.17.1
+

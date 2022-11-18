@@ -1,0 +1,65 @@
+From 34f12cf3d1910210c5a587854b7c6f2d010a2778 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:47:07 +0800
+Subject: [PATCH 53/54] 834: watchdog: Add RTK_WATCHDOG
+
+---
+ drivers/watchdog/Kconfig  | 14 ++++++++++++++
+ drivers/watchdog/Makefile |  2 ++
+ 2 files changed, 16 insertions(+)
+
+diff --git a/drivers/watchdog/Kconfig b/drivers/watchdog/Kconfig
+index 01ce3f41c..38d49e8b4 100644
+--- a/drivers/watchdog/Kconfig
++++ b/drivers/watchdog/Kconfig
+@@ -105,6 +105,14 @@ config WATCHDOG_PRETIMEOUT_GOV_PANIC
+ 	  Panic watchdog pretimeout governor, on watchdog pretimeout
+ 	  event put the kernel into panic.
+ 
++config WATCHDOG_PRETIMEOUT_GOV_DUMP
++	tristate "Dump watchdog pretimeout governor"
++	depends on WATCHDOG_CORE
++	default WATCHDOG_CORE
++	help
++	  Dump watchdog pretimeout governor, on watchdog pretimeout
++	  event, dump infortmation form sysrq and reboot.
++
+ choice
+ 	prompt "Default Watchdog Pretimeout Governor"
+ 	default WATCHDOG_PRETIMEOUT_DEFAULT_GOV_PANIC
+@@ -939,6 +947,12 @@ config ASPEED_WATCHDOG
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called aspeed_wdt.
+ 
++config RTK_WATCHDOG
++    tristate "Realtek watchdog support"
++    depends on ARCH_REALTEK
++    select WATCHDOG_CORE
++    help
++      Realtek  watchdog support.
+ config ZX2967_WATCHDOG
+ 	tristate "ZTE zx2967 SoCs watchdog support"
+ 	depends on ARCH_ZX
+diff --git a/drivers/watchdog/Makefile b/drivers/watchdog/Makefile
+index 071a2e50b..7d14e89a7 100644
+--- a/drivers/watchdog/Makefile
++++ b/drivers/watchdog/Makefile
+@@ -12,6 +12,7 @@ watchdog-$(CONFIG_WATCHDOG_PRETIMEOUT_GOV)	+= watchdog_pretimeout.o
+ 
+ obj-$(CONFIG_WATCHDOG_PRETIMEOUT_GOV_NOOP)	+= pretimeout_noop.o
+ obj-$(CONFIG_WATCHDOG_PRETIMEOUT_GOV_PANIC)	+= pretimeout_panic.o
++obj-$(CONFIG_WATCHDOG_PRETIMEOUT_GOV_DUMP)	+= pretimeout_dump.o
+ 
+ # Only one watchdog can succeed. We probe the ISA/PCI/USB based
+ # watchdog-cards first, then the architecture specific watchdog
+@@ -92,6 +93,7 @@ obj-$(CONFIG_ZX2967_WATCHDOG) += zx2967_wdt.o
+ obj-$(CONFIG_STM32_WATCHDOG) += stm32_iwdg.o
+ obj-$(CONFIG_UNIPHIER_WATCHDOG) += uniphier_wdt.o
+ obj-$(CONFIG_RTD119X_WATCHDOG) += rtd119x_wdt.o
++obj-$(CONFIG_RTK_WATCHDOG) += rtk_wdt.o
+ obj-$(CONFIG_SPRD_WATCHDOG) += sprd_wdt.o
+ obj-$(CONFIG_PM8916_WATCHDOG) += pm8916_wdt.o
+ obj-$(CONFIG_ARM_SMC_WATCHDOG) += arm_smc_wdt.o
+-- 
+2.17.1
+

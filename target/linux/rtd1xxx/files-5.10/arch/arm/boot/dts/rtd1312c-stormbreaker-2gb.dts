@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2019-2020 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd1312c-stormbreaker.dtsi"
+
+/ {
+	compatible = "realtek,storm-breaker", "realtek,rtd1312c";
+	model = "Realtek Storm Breaker EVB(2GB, TEE)";
+
+	memory@4000 {
+		device_type = "memory";
+		reg = <0x00004000 0x7fffc000>; /* 2 GiB */
+	};
+
+	chosen {
+		linux,initrd-start = <0x03100000>;
+		linux,initrd-end = <0x03500000>;
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,460800 init=/init loop.max_part=7 androidboot.storage=emmc androidboot.hardware=groot";
+	};
+};
+
+&pcie {
+	status = "disabled";
+};
+
+&pcie2 {
+	status = "disabled";
+};
+
+&pcie3 {
+	status = "disabled";
+};
+
+&uart1 {
+	status = "okay";
+};
+
+&rfkill {
+	status = "okay";
+};

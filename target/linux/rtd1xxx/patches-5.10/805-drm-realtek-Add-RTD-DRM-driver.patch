@@ -1,0 +1,38 @@
+From e8223deb09a33b5df6462b81e01541c1f402636d Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:07:00 +0800
+Subject: [PATCH 24/54] 805: drm/realtek: Add RTD DRM driver
+
+---
+ drivers/gpu/drm/Kconfig  | 2 ++
+ drivers/gpu/drm/Makefile | 1 +
+ 2 files changed, 3 insertions(+)
+
+diff --git a/drivers/gpu/drm/Kconfig b/drivers/gpu/drm/Kconfig
+index ca868271f..545538a2b 100644
+--- a/drivers/gpu/drm/Kconfig
++++ b/drivers/gpu/drm/Kconfig
+@@ -374,6 +374,8 @@ source "drivers/gpu/drm/tiny/Kconfig"
+ 
+ source "drivers/gpu/drm/pl111/Kconfig"
+ 
++source "drivers/gpu/drm/realtek/Kconfig"
++
+ source "drivers/gpu/drm/tve200/Kconfig"
+ 
+ source "drivers/gpu/drm/xen/Kconfig"
+diff --git a/drivers/gpu/drm/Makefile b/drivers/gpu/drm/Makefile
+index 81569009f..03aff1aa4 100644
+--- a/drivers/gpu/drm/Makefile
++++ b/drivers/gpu/drm/Makefile
+@@ -104,6 +104,7 @@ obj-y 			+= imx/
+ obj-$(CONFIG_DRM_INGENIC) += ingenic/
+ obj-$(CONFIG_DRM_MEDIATEK) += mediatek/
+ obj-$(CONFIG_DRM_MESON)	+= meson/
++obj-$(CONFIG_DRM_RTK) += realtek/
+ obj-y			+= i2c/
+ obj-y			+= panel/
+ obj-y			+= bridge/
+-- 
+2.17.1
+

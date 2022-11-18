@@ -1,0 +1,35 @@
+From 49c85ce24fadcdb2fc806ec2889d6e1f5a3bd396 Mon Sep 17 00:00:00 2001
+From: Greg Kroah-Hartman <gregkh@google.com>
+Date: Thu, 30 Apr 2020 12:10:29 +0200
+Subject: [PATCH 35/50] ANDROID: ion: fix export symbol type
+
+In commit d872160f11bc ("staging: ion: make system and contig heaps
+modular") a new symbol was exported, but it should have been set as a
+_GPL symbol.
+
+Fix this up by properly changing the export type.
+
+Bug: 133508579
+Cc: Sandeep Patil <sspatil@google.com>
+Signed-off-by: Greg Kroah-Hartman <gregkh@google.com>
+Change-Id: I6595d3a3dc12698c16e514d945256e082b942652
+---
+ drivers/staging/android/ion/ion.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/android/ion/ion.c b/drivers/staging/android/ion/ion.c
+index 78972f26f..10c33b16f 100644
+--- a/drivers/staging/android/ion/ion.c
++++ b/drivers/staging/android/ion/ion.c
+@@ -419,7 +419,7 @@ void ion_device_remove_heap(struct ion_heap *heap)
+ 	dev->heap_cnt--;
+ 	up_write(&dev->lock);
+ }
+-EXPORT_SYMBOL(ion_device_remove_heap);
++EXPORT_SYMBOL_GPL(ion_device_remove_heap);
+ 
+ static ssize_t
+ total_heaps_kb_show(struct kobject *kobj, struct kobj_attribute *attr,
+-- 
+2.17.1
+

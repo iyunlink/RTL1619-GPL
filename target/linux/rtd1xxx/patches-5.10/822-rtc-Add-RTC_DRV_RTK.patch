@@ -1,0 +1,49 @@
+From be51e3dfe0d1266c7c1e888d72baaf775d8ee51a Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:33:54 +0800
+Subject: [PATCH 41/54] 822: rtc: Add RTC_DRV_RTK
+
+---
+ drivers/rtc/Kconfig  | 15 +++++++++++++++
+ drivers/rtc/Makefile |  2 ++
+ 2 files changed, 17 insertions(+)
+
+diff --git a/drivers/rtc/Kconfig b/drivers/rtc/Kconfig
+index 54cf5ec8f..1666ddfea 100644
+--- a/drivers/rtc/Kconfig
++++ b/drivers/rtc/Kconfig
+@@ -1313,6 +1313,21 @@ config RTC_DRV_CROS_EC
+ 	  This driver can also be built as a module. If so, the module
+ 	  will be called rtc-cros-ec.
+ 
++config RTC_DRV_RTK
++	tristate "Realtek RTC"
++	depends on ARCH_REALTEK
++	select MFD_SYSCON
++	help
++	  Realtek RTC support.
++
++config RTC_DRV_SW
++	tristate "Realtek Software-emulated RTC"
++	help
++	  This enable Realtek Software-emulated RTC driver, and
++	  device.
++
++	  If not sure, say N.
++
+ comment "on-CPU RTC drivers"
+ 
+ config RTC_DRV_ASM9260
+diff --git a/drivers/rtc/Makefile b/drivers/rtc/Makefile
+index bfb574641..3485fbb7f 100644
+--- a/drivers/rtc/Makefile
++++ b/drivers/rtc/Makefile
+@@ -183,3 +183,5 @@ obj-$(CONFIG_RTC_DRV_WM8350)	+= rtc-wm8350.o
+ obj-$(CONFIG_RTC_DRV_X1205)	+= rtc-x1205.o
+ obj-$(CONFIG_RTC_DRV_XGENE)	+= rtc-xgene.o
+ obj-$(CONFIG_RTC_DRV_ZYNQMP)	+= rtc-zynqmp.o
++obj-$(CONFIG_RTC_DRV_RTK)	+= rtc-rtk.o
++obj-$(CONFIG_RTC_DRV_SW)	+= rtc-sw.o
+-- 
+2.17.1
+

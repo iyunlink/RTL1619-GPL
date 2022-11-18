@@ -1,0 +1,21 @@
+Realtek Traffic PMU (TFC) dt-bindings
+=====================================
+
+Required properties:
+- compatible:
+        "realtek,rtk-16xxb-ddrc-tfc-pmu": monitoring traffic of each DDRC ports
+	for rtd16xxb family.
+- reg: address range of traffic PMU
+
+Optional properties:
+- overflow: indicating the PMU has overflow interrupt
+
+Example:
+
+	ddrc-tfc-pmu: rtk-ddrc-tfc-pmu@94400 {
+		compatible = "realtek,rtk-16xxb-ddrc-tfc-pmu";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x0 0x94400 0x0 0x0200>;
+		overflow = <1>;
+	};

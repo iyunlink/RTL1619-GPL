@@ -1,0 +1,56 @@
+From 6330e0c2f48633d78ab292f2628babf3856eef0a Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:27:07 +0800
+Subject: [PATCH 33/54] 814: PCI: Add PCIE_RTD
+
+---
+ drivers/pci/controller/Kconfig  | 19 +++++++++++++++++++
+ drivers/pci/controller/Makefile |  2 ++
+ 2 files changed, 21 insertions(+)
+
+diff --git a/drivers/pci/controller/Kconfig b/drivers/pci/controller/Kconfig
+index 64e2f5e37..03b17b400 100644
+--- a/drivers/pci/controller/Kconfig
++++ b/drivers/pci/controller/Kconfig
+@@ -305,6 +305,25 @@ config PCIE_HISI_ERR
+ 	  Say Y here if you want error handling support
+ 	  for the PCIe controller's errors on HiSilicon HIP SoCs
+ 
++config PCIE_RTD
++	tristate "Realtek PCIe host controller"
++	select PHY_RTD_PCIE
++	help
++	  Realtek PCIe host controller support.
++
++config RTD16XXB_PCIE1_ACP
++	bool "Realtek PCIe host controller ACP support"
++	depends on PCIE_RTD
++	help
++	  Enable Realtek RTD16XXB PCIE1 ACP.
++
++config PCIE_RTD_TRANS
++	bool "Realtek PCIe tanslation"
++	depends on PCIE_RTD
++	help
++	  Realtek PCIe MMIO translation support.
++
++
+ source "drivers/pci/controller/dwc/Kconfig"
+ source "drivers/pci/controller/mobiveil/Kconfig"
+ source "drivers/pci/controller/cadence/Kconfig"
+diff --git a/drivers/pci/controller/Makefile b/drivers/pci/controller/Makefile
+index 04c6edc28..ad3df803f 100644
+--- a/drivers/pci/controller/Makefile
++++ b/drivers/pci/controller/Makefile
+@@ -32,6 +32,8 @@ obj-$(CONFIG_VMD) += vmd.o
+ obj-$(CONFIG_PCIE_BRCMSTB) += pcie-brcmstb.o
+ obj-$(CONFIG_PCI_LOONGSON) += pci-loongson.o
+ obj-$(CONFIG_PCIE_HISI_ERR) += pcie-hisi-error.o
++obj-$(CONFIG_PCIE_RTD) += pcie-rtd.o
++obj-$(CONFIG_PCIE_RTD_TRANS) += pcie-rtd-trans.o
+ # pcie-hisi.o quirks are needed even without CONFIG_PCIE_DW
+ obj-y				+= dwc/
+ obj-y				+= mobiveil/
+-- 
+2.17.1
+

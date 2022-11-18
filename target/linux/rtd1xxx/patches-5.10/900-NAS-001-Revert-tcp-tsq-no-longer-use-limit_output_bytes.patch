@@ -1,0 +1,38 @@
+From b00d95811d573f395636666fe33fccb59f29bffd Mon Sep 17 00:00:00 2001
+From: phinex <phinex@realtek.com>
+Date: Sat, 5 Jun 2021 19:19:22 +0800
+Subject: [PATCH] Revert "tcp: tsq: no longer use limit_output_bytes for paced
+ flows"
+
+This reverts commit c73e5807e4f6fc6d373a5db55b45f639f8bb6328.
+
+Change-Id: I0c2eb8416abb58cc8227bbf1a7f8efa1a519a8f7
+---
+ Documentation/networking/ip-sysctl.txt | 2 +-
+ net/ipv4/tcp_ipv4.c                    | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+--- a/net/ipv4/tcp_ipv4.c
++++ b/net/ipv4/tcp_ipv4.c
+@@ -2904,8 +2904,8 @@ static int __net_init tcp_sk_init(struct
+ 	 * which are too large can cause TCP streams to be bursty.
+ 	 */
+ 	net->ipv4.sysctl_tcp_tso_win_divisor = 3;
+-	/* Default TSQ limit of 16 TSO segments */
+-	net->ipv4.sysctl_tcp_limit_output_bytes = 16 * 65536;
++	/* Default TSQ limit of four TSO segments */
++	net->ipv4.sysctl_tcp_limit_output_bytes = 262144;
+ 	/* rfc5961 challenge ack rate limiting */
+ 	net->ipv4.sysctl_tcp_challenge_ack_limit = 1000;
+ 	net->ipv4.sysctl_tcp_min_tso_segs = 2;
+--- a/Documentation/networking/ip-sysctl.rst
++++ b/Documentation/networking/ip-sysctl.rst
+@@ -907,7 +907,7 @@ tcp_limit_output_bytes - INTEGER
+ 	limits the number of bytes on qdisc or device to reduce artificial
+ 	RTT/cwnd and reduce bufferbloat.
+ 
+-	Default: 1048576 (16 * 65536)
++	Default: 262144
+ 
+ tcp_challenge_ack_limit - INTEGER
+ 	Limits number of Challenge ACK sent per second, as recommended

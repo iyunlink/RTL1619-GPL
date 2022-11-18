@@ -1,0 +1,49 @@
+From 547f849c32666becee1c772cf4100d992cf99e51 Mon Sep 17 00:00:00 2001
+From: stanley_chang <stanley_chang@realtek.com>
+Date: Fri, 11 Sep 2020 13:36:00 +0800
+Subject: [PATCH 02/54] 200: move the define of struct soc_device to header
+ file.
+
+Change-Id: I75944304a0a3570ef36d7715568e73f62ad4911f
+---
+ drivers/base/soc.c      | 6 ------
+ include/linux/sys_soc.h | 6 ++++++
+ 2 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/drivers/base/soc.c b/drivers/base/soc.c
+index d34609bb7..243a6d3d2 100644
+--- a/drivers/base/soc.c
++++ b/drivers/base/soc.c
+@@ -21,12 +21,6 @@ static DEFINE_IDA(soc_ida);
+ static ssize_t soc_info_show(struct device *dev, struct device_attribute *attr,
+ 			     char *buf);
+ 
+-struct soc_device {
+-	struct device dev;
+-	struct soc_device_attribute *attr;
+-	int soc_dev_num;
+-};
+-
+ static struct bus_type soc_bus_type = {
+ 	.name  = "soc",
+ };
+diff --git a/include/linux/sys_soc.h b/include/linux/sys_soc.h
+index d9b3cf0f4..5f476b0b7 100644
+--- a/include/linux/sys_soc.h
++++ b/include/linux/sys_soc.h
+@@ -18,6 +18,12 @@ struct soc_device_attribute {
+ 	const struct attribute_group *custom_attr_group;
+ };
+ 
++struct soc_device {
++	struct device dev;
++	struct soc_device_attribute *attr;
++	int soc_dev_num;
++};
++
+ /**
+  * soc_device_register - register SoC as a device
+  * @soc_plat_dev_attr: Attributes passed from platform to be attributed to a SoC
+-- 
+2.17.1
+

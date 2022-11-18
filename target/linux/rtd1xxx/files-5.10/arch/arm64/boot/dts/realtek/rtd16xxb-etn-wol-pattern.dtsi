@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: GPL-2.0 OR MIT
+/*
+ * Realtek RTD16xxb SoC family
+ *
+ * Copyright (c) 2019-2021 Realtek Semiconductor Corp.
+ */
+&nic {
+	wake-mask0 = [3f 30 80 c0 3f 10 80 ff ff 1f 00 00 00 00 00 00];
+	wake-crc0 = <0x8d25>;
+	wake-pattern0 = [01 00 5e 00 00 fb 08 00 11 e0 00 00 fb 14 e9 14
+			e9 00 5f 67 6f 6f 67 6c 65 63 61 73 74 04 5f 74
+			63 70 05 6c 6f 63 61 6c];
+	wake-offset0 = <0x0>;
+	wake-mask1 = [3f 30 80 c0 3f 10 00 00 c0 ff ff 0f 00 00 00 00];
+	wake-crc1 = <0x8d25>;
+	wake-pattern1 = [01 00 5e 00 00 fb 08 00 11 e0 00 00 fb 14 e9 14
+			e9 00 5f 67 6f 6f 67 6c 65 63 61 73 74 04 5f 74
+			63 70 05 6c 6f 63 61 6c];
+	wake-offset1 = <0x0>;
+	wake-mask2 = [3f 30 80 c0 3f 10 00 00 00 00 00 00 80 ff ff 1f];
+	wake-crc2 = <0x8d25>;
+	wake-pattern2 = [01 00 5e 00 00 fb 08 00 11 e0 00 00 fb 14 e9 14
+			e9 00 5f 67 6f 6f 67 6c 65 63 61 73 74 04 5f 74
+			63 70 05 6c 6f 63 61 6c];
+	wake-offset2 = <0x0>;
+	wake-mask3 = [3f 30 10 00 c0 ff ff 03 01 f8 ff ff 01 00 00 00];
+	wake-crc3 = <0x11da>;
+	wake-pattern3 = [33 33 00 00 00 fb 86 dd 11 ff 02 00 00 00 00 00
+			00 00 00 00 00 00 00 00 fb 14 e9 14 e9 00 5f 67
+			6f 6f 67 6c 65 63 61 73 74 04 5f 74 63 70 05 6c
+			6f 63 61 6c];
+	wake-offset3 = <0x0>;
+	wake-mask4 = [3f 30 10 00 c0 ff ff 03 01 00 00 fc ff ff 00 00];
+	wake-crc4 = <0x11da>;
+	wake-pattern4 = [33 33 00 00 00 fb 86 dd 11 ff 02 00 00 00 00 00
+			00 00 00 00 00 00 00 00 fb 14 e9 14 e9 00 5f 67
+			6f 6f 67 6c 65 63 61 73 74 04 5f 74 63 70 05 6c
+			6f 63 61 6c];
+	wake-offset4 = <0x0>;
+	wake-mask5 = [3f 30 10 00 c0 ff ff 03 01 00 00 00 00 00 00 f8];
+	wake-crc5 = <0x15f8>;
+	wake-pattern5 = [33 33 00 00 00 fb 86 dd 11 ff 02 00 00 00 00 00
+			00 00 00 00 00 00 00 00 fb 14 e9 14 e9 00 5f 67
+			6f 6f 67];
+	wake-offset5 = <0x0>;
+};

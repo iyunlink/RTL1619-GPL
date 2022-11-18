@@ -1,0 +1,79 @@
+Index: linux-5.10.109/include/uapi/sound/asound.h
+===================================================================
+--- linux-5.10.109.orig/include/uapi/sound/asound.h
++++ linux-5.10.109/include/uapi/sound/asound.h
+@@ -537,7 +537,6 @@ struct __snd_pcm_mmap_control {
+ 	snd_pcm_uframes_t avail_min;	/* RW: min available frames for wakeup */
+ };
+ 
+-#ifdef CONFIG_ARCH_REALTEK
+ struct AUDIO_RPC_EQUALIZER_MODE {
+ 	int mode;
+ 	int gain[10];
+@@ -548,7 +547,6 @@ struct AUDIO_RPC_OUT_PARAMETER {
+ 	int lpcm_out_delay;
+ 	int hw_buffer_delay;
+ };
+-#endif /* CONFIG_ARCH_REALTEK */
+ 
+ #define SNDRV_PCM_SYNC_PTR_HWSYNC	(1<<0)	/* execute hwsync */
+ #define SNDRV_PCM_SYNC_PTR_APPL		(1<<1)	/* get appl_ptr from driver (r/w op) */
+@@ -713,7 +711,6 @@ enum {
+ #define SNDRV_PCM_IOCTL_LINK		_IOW('A', 0x60, int)
+ #define SNDRV_PCM_IOCTL_UNLINK		_IO('A', 0x61)
+ 
+-#ifdef CONFIG_ARCH_REALTEK
+ #define SNDRV_PCM_IOCTL_VOLUME_SET   _IOW('A', 0xE0, int)
+ #define SNDRV_PCM_IOCTL_VOLUME_GET   _IOR('A', 0xE1, int)
+ #define SNDRV_PCM_IOCTL_EQ_SET       _IOW('A', 0xE2, struct AUDIO_RPC_EQUALIZER_MODE)
+@@ -721,7 +718,6 @@ enum {
+ #define SNDRV_PCM_IOCTL_MMAP_DATA_FD _IOW('A', 0xE4, int)
+ #define SNDRV_PCM_IOCTL_GET_LATENCY  _IOR('A', 0xF0, int)
+ #define SNDRV_PCM_IOCTL_GET_FW_DELAY _IOR('A', 0xF1, snd_pcm_sframes_t)
+-#endif /* CONFIG_ARCH_REALTEK */
+ 
+ /*****************************************************************************
+  *                                                                           *
+Index: linux-5.10.109/include/uapi/sound/compress_offload.h
+===================================================================
+--- linux-5.10.109.orig/include/uapi/sound/compress_offload.h
++++ linux-5.10.109/include/uapi/sound/compress_offload.h
+@@ -180,9 +180,7 @@ struct snd_compr_metadata {
+ #define SNDRV_COMPRESS_STOP		_IO('C', 0x33)
+ #define SNDRV_COMPRESS_DRAIN		_IO('C', 0x34)
+ 
+-#ifdef CONFIG_ARCH_REALTEK
+ #define SNDRV_COMPRESS_GET_LATENCY      _IOR('C', 0xf0, int)
+-#endif /* CONFIG_ARCH_REALTEK */
+ 
+ #define SNDRV_COMPRESS_NEXT_TRACK	_IO('C', 0x35)
+ #define SNDRV_COMPRESS_PARTIAL_DRAIN	_IO('C', 0x36)
+@@ -195,8 +193,6 @@ struct snd_compr_metadata {
+ #define SND_COMPR_TRIGGER_NEXT_TRACK 8
+ #define SND_COMPR_TRIGGER_PARTIAL_DRAIN 9
+ 
+-#ifdef CONFIG_ARCH_REALTEK
+ #define SND_COMPR_TRIGGER_GET_LATENCY 0xf
+-#endif /* CONFIG_ARCH_REALTEK */
+ 
+ #endif
+Index: linux-5.10.109/include/uapi/sound/compress_params.h
+===================================================================
+--- linux-5.10.109.orig/include/uapi/sound/compress_params.h
++++ linux-5.10.109/include/uapi/sound/compress_params.h
+@@ -79,7 +79,6 @@
+ #define SND_AUDIOCODEC_APE                   ((__u32) 0x00000010)
+ #define SND_AUDIOCODEC_MAX                   SND_AUDIOCODEC_APE
+ 
+-#ifdef CONFIG_ARCH_REALTEK
+ /* Rtk begin */
+ #define SND_AUDIOCODEC_EAC3                  ((__u32) 0x0000000F)
+ #define SND_AUDIOCODEC_DTS                   ((__u32) 0x00000010)
+@@ -87,7 +86,6 @@
+ #define SND_AUDIOCODEC_TRUEHD                ((__u32) 0x00000012)
+ #define SND_AUDIOCODEC_AC3                   ((__u32) 0x00000013)
+ /* Rtk end */
+-#endif /* CONFIG_ARCH_REALTEK */
+ 
+ /*
+  * Profile and modes are listed with bit masks. This allows for a

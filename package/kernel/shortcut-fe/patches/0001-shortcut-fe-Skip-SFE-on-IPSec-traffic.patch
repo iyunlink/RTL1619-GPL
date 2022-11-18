@@ -1,0 +1,59 @@
+From fa9f77ee1976cb1d1050d6f392d57faf0c2a8dd1 Mon Sep 17 00:00:00 2001
+Subject: [PATCH 1/6] shortcut-fe: Skip SFE on IPSec traffic
+
+---
+ shortcut-fe/sfe_cm.c | 15 +++++++++++++++
+ 1 file changed, 15 insertions(+)
+
+Index: shortcut-fe-2021-03-17-697977d8/shortcut-fe/sfe_cm.c
+===================================================================
+--- shortcut-fe-2021-03-17-697977d8.orig/shortcut-fe/sfe_cm.c
++++ shortcut-fe-2021-03-17-697977d8/shortcut-fe/sfe_cm.c
+@@ -512,6 +512,21 @@ static unsigned int sfe_cm_post_routing(
+ 			return NF_ACCEPT;
+ 		}
+ 		spin_unlock_bh(&ct->lock);
++
++		/*
++		 * Somehow, SFE is not playing nice with IPSec traffic.
++		 * Do not accelerate for now.
++		 */
++		if (ntohs(sic.dest_port) == 4500 || ntohs(sic.dest_port) == 500) {
++			if (likely(is_v4))
++				DEBUG_TRACE("IPsec bypass: %pI4:%d(%pI4:%d) to %pI4:%d(%pI4:%d)\n",
++					&sic.src_ip.ip, ntohs(sic.src_port), &sic.src_ip_xlate.ip, ntohs(sic.src_port_xlate),
++					&sic.dest_ip.ip, ntohs(sic.dest_port), &sic.dest_ip_xlate.ip, ntohs(sic.dest_port_xlate));
++			else
++				DEBUG_TRACE("IPsec bypass: %pI6:%d to %pI6:%d\n",
++					&sic.src_ip.ip6, ntohs(sic.src_port), &sic.dest_ip.ip6, ntohs(sic.dest_port));
++			return NF_ACCEPT;
++		}
+ 		break;
+ 
+ 	case IPPROTO_UDP:
+Index: shortcut-fe-2021-03-17-697977d8/fast-classifier/fast-classifier.c
+===================================================================
+--- shortcut-fe-2021-03-17-697977d8.orig/fast-classifier/fast-classifier.c
++++ shortcut-fe-2021-03-17-697977d8/fast-classifier/fast-classifier.c
+@@ -941,6 +941,21 @@ static unsigned int fast_classifier_post
+ 		sic.dest_port = orig_tuple.dst.u.udp.port;
+ 		sic.src_port_xlate = reply_tuple.dst.u.udp.port;
+ 		sic.dest_port_xlate = reply_tuple.src.u.udp.port;
++
++		/*
++		 * Somehow, SFE is not playing nice with IPSec traffic.
++		 * Do not accelerate for now.
++		 */
++		if (ntohs(sic.dest_port) == 4500 || ntohs(sic.dest_port) == 500) {
++			if (likely(is_v4))
++				DEBUG_TRACE("IPsec bypass: %pI4:%d(%pI4:%d) to %pI4:%d(%pI4:%d)\n",
++					&sic.src_ip.ip, ntohs(sic.src_port), &sic.src_ip_xlate.ip, ntohs(sic.src_port_xlate),
++					&sic.dest_ip.ip, ntohs(sic.dest_port), &sic.dest_ip_xlate.ip, ntohs(sic.dest_port_xlate));
++			else
++				DEBUG_TRACE("IPsec bypass: %pI6:%d to %pI6:%d\n",
++					&sic.src_ip.ip6, ntohs(sic.src_port), &sic.dest_ip.ip6, ntohs(sic.dest_port));
++			return NF_ACCEPT;
++		}
+ 		break;
+ 
+ 	default:

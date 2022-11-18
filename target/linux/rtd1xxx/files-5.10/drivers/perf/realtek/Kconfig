@@ -1,0 +1,69 @@
+#
+# Realtek SOC uncore PMU
+#
+
+menuconfig RTK_PMU
+	bool "RTK PMU"
+	depends on ARCH_REALTEK
+	depends on PERF_EVENTS
+	help
+	  Enable Realtek SoC PMU.
+
+if RTK_PMU
+
+config RTK_DBUS_PMU
+	tristate "DBUS PMU for Realtek"
+	depends on RTK_PMU
+	help
+	  DBUS PMU driver for Realtek SoC
+
+config RTK_DDRC_PMU
+	tristate "PMU of DDRC"
+	depends on RTK_PMU
+	help
+	  DDR controller PMU for Realtek SoC
+
+config RTK_TFC_PMU
+	tristate "PMU of DDRC"
+	depends on RTK_PMU
+	help
+	  Traffic monitoring PMU for Realtek SoC
+
+config RTK_RBUS_PMU
+	tristate "PMU of Rbus"
+	depends on RTK_PMU
+	help
+	  Register bus PMU for Realtek SoC
+
+config RTK_RXI316_PMU
+	tristate "Realtek RXI316 PMU"
+	depends on RTK_PMU
+	default n
+
+config RTK_PMU_GATOR_COMPATIBLE
+	bool "RTK PMU Gator Compatible"
+	help
+	  Gator use a pre-defined event config in opening perf event to determine the
+	  existence of a PMU. The event config may be invalid for a RTK PMU. To workaround
+	  this, the event config checking is postponed.
+
+config RTK_PMU_DEV
+	bool "RTK PMU Development"
+	help
+	  Additional checking of occurence of cornor cases.
+
+config RTK_PMU_DEBUG
+	bool "RTK PMU Debug"
+	help
+	  Message for debug RTK PMU
+
+config RTK_PMU_TICK_REFRESH
+	bool "Kick perf timer periodically"
+	depends on NO_HZ_IDLE
+	help
+	  The perf tick may not work as expected if the scheduler is tickless, leading to
+	  sampling throttled. This option kick the perf tick to ensure the sampling work
+	  well.
+
+endif # RTK PMU
+

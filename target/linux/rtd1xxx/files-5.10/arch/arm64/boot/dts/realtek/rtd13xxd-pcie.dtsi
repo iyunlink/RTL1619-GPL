@@ -1,0 +1,63 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Realtek RTD13xxd SoC family
+ *
+ * Copyright (c) 2019-2020 Realtek Semiconductor Corp.
+ */
+
+&rbus {
+
+	pcie1: pcie@a0000 {
+		compatible = "realtek,rtd13xxd-pcie-slot1", "syscon";
+		reg = <0xA0000 0x00001000>,
+		      <0xA1000 0x00001000>;
+		syscon = <&m2tmx>;
+		syscon-scpu-wrapper = <&scpu_wrapper>;
+		interrupt-names = "rtk-pcie1-intr";
+		#interrupt-cells = <1>;
+		interrupts = <0 62 4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pcie_clk_pins_1>;
+		bus-range = <0x00 0xff>;
+		linux,pci-domain = <0>;
+		device_type = "pci";
+		perst-gpios = <&gpio 52 GPIO_ACTIVE_HIGH>;
+		#size-cells = <2>;
+		#address-cells = <3>;
+		num-lanes = <1>;
+		phys = <&pcie1_phy>;
+		speed-mode = <1>; // 0:GEN1, 1:GEN2
+		debug-mode = <0>;
+		//ranges = <0x03000000 0x0 0x980A2000 0x980A2000 0x0 0x0001E000
+		ranges = <0x02000000 0x0 0xA0000000 0xA0000000 0x0 0x00300000>,
+			 <0x01000000 0x0 0x00040000 0x10040000 0x0 0x00010000>;
+		resets = <&cc RTD1319D_CRT_RSTN_PCIE1>,
+			<&cc RTD1319D_CRT_RSTN_PCIE1_CORE>,
+			<&cc RTD1319D_CRT_RSTN_PCIE1_POWER>,
+			<&cc RTD1319D_CRT_RSTN_PCIE1_NONSTICH>,
+			<&cc RTD1319D_CRT_RSTN_PCIE1_STITCH>;
+
+		reset-names = "rstn",
+			"core",
+			"power",
+			"nonstitch",
+			"stitch";
+		clocks = <&cc RTD1319D_CRT_CLK_EN_PCIE1>;
+		status = "disabled";
+	};
+
+
+};
+
+/ {
+	pcie1_phy: pcie1_phy {
+		compatible = "realtek,rtd13xxd-pcie-slot1-phy";
+		syscon =  <&pcie1>;
+		resets = <&cc RTD1319D_CRT_RSTN_PCIE1_PHY>,
+			 <&cc RTD1319D_CRT_RSTN_PCIE1_PHY_MDIO>;
+		reset-names = "phy",
+			      "phy_mdio";
+                #phy-cells = <0>;
+		status = "disabled";
+	};
+};

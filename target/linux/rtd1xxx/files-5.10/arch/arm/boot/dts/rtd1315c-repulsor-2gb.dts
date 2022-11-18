@@ -1,0 +1,18 @@
+
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2020 Realtek Semiconductor Corp.
+ */
+/dts-v1/;
+#include "rtd1315c-repulsor.dtsi"
+/ {
+	compatible = "realtek,repulsor", "realtek,rtd1315c";
+	model = "Realtek Repulsor EVB (2GB)";
+	memory@4000 {
+		device_type = "memory";
+		reg = <0x00004000 0x7fffc000>; /* 2 GB */
+	};
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 init=/init";
+	};
+};

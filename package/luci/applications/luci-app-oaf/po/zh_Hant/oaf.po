@@ -1,0 +1,158 @@
+
+msgid "website"
+msgstr "常用網站"
+
+msgid "appfilter"
+msgstr "應用程式過濾"
+
+msgid "App Filter"
+msgstr "應用程式過濾"
+
+msgid "game"
+msgstr "遊戲"
+
+msgid "web"
+msgstr "網頁"
+
+msgid "video"
+msgstr "視訊"
+
+msgid "chat"
+msgstr "社交"
+
+msgid "download"
+msgstr "下載"
+
+msgid "p2p"
+msgstr "P2P"
+
+msgid "music"
+msgstr "音樂"
+
+msgid "shopping"
+msgstr "購物"
+
+msgid "working"
+msgstr "辦公"
+
+msgid "employee"
+msgstr "招募"
+
+msgid "Basic Settings"
+msgstr "基本設定"
+
+msgid "App Filter Rules"
+msgstr "過濾規則"
+
+msgid "Select at least one user, otherwise it will take effect for all users"
+msgstr "請至少選擇一個使用者，否則會套用到所有使用者身上"
+
+msgid "Select users"
+msgstr "選擇使用者"
+
+msgid "Id"
+msgstr "編號"
+
+msgid "Hostname"
+msgstr "主機名稱"
+
+msgid "Common App(TOP5)"
+msgstr "長用軟體(TOP5)"
+
+msgid "Online Status"
+msgstr "連線狀態"
+
+msgid "Client List"
+msgstr "用戶端列表"
+
+msgid "Online"
+msgstr "上線"
+
+msgid "Offline"
+msgstr "離線"
+
+msgid "App Time Statistics"
+msgstr "時間統計"
+
+msgid "Filter Status"
+msgstr "過濾狀態"
+
+msgid "Data Statistics"
+msgstr "數據統計"
+
+msgid "Current Version"
+msgstr "目前版本"
+
+msgid "App Feature Num"
+msgstr "特徵碼數量"
+
+msgid "Update feature"
+msgstr "特徵碼更新"
+
+msgid "Time Setting"
+msgstr "時間控制"
+
+msgid "Sun"
+msgstr "週日"
+
+msgid "Mon"
+msgstr "週一"
+
+msgid "Tue"
+msgstr "週二"
+
+msgid "Wed"
+msgstr "週三"
+
+msgid "Thur"
+msgstr "週四"
+
+msgid "Fri"
+msgstr "週五"
+
+msgid "Sat"
+msgstr "週六"
+
+msgid "Update the feature file successfully, please refresh the page"
+msgstr "更新特徵碼成功，請更更新畫面!"
+
+msgid "Failed to update feature file, format error"
+msgstr "更新特徵碼錯誤，格式錯誤!!"
+
+msgid "Select feature file:"
+msgstr "選擇特徵碼檔案:"
+
+msgid "Start Time"
+msgstr "開始時間"
+
+msgid "End Time"
+msgstr "結束時間"
+
+msgid "App Name"
+msgstr "應用程式名稱"
+
+msgid "Visit Time"
+msgstr "訪問時間"
+
+msgid "App classification time statistics"
+msgstr "分類時間統計"
+
+msgid "Percentage"
+msgstr "百分比"
+
+msgid "Filtered"
+msgstr "已過濾"
+
+msgid "Unfiltered"
+msgstr "未過濾"
+
+msgid "h"
+msgstr "小時"
+
+msgid "m"
+msgstr "分"
+
+msgid "Enable App Filter"
+msgstr "開啟應用程式過濾"
+
+

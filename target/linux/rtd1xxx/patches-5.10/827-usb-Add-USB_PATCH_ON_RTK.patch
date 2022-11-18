@@ -1,0 +1,504 @@
+From 46f76a096f242c6a8e2a59185f5804cf2978b2d2 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:39:55 +0800
+Subject: [PATCH 46/54] 827: usb: Add USB_PATCH_ON_RTK
+
+---
+ drivers/usb/Kconfig       |   4 +
+ drivers/usb/core/Kconfig  |  13 +++
+ drivers/usb/core/Makefile |   1 +
+ drivers/usb/core/hub.c    |  91 ++++++++++++++++++
+ drivers/usb/core/quirks.c |  20 ++++
+ drivers/usb/core/sysfs.c  | 191 ++++++++++++++++++++++++++++++++++++++
+ drivers/usb/dwc3/Kconfig  |  32 +++++++
+ 7 files changed, 352 insertions(+)
+
+diff --git a/drivers/usb/Kconfig b/drivers/usb/Kconfig
+index 26475b409..4afd6df53 100644
+--- a/drivers/usb/Kconfig
++++ b/drivers/usb/Kconfig
+@@ -164,6 +164,10 @@ source "drivers/usb/misc/Kconfig"
+ 
+ source "drivers/usb/atm/Kconfig"
+ 
++config USB_PATCH_ON_RTK
++	bool
++	default y if USB_OHCI_RTK || USB_EHCI_RTK || USB_DWC3_RTK
++
+ endif # USB
+ 
+ source "drivers/usb/phy/Kconfig"
+diff --git a/drivers/usb/core/Kconfig b/drivers/usb/core/Kconfig
+index 351ede4b5..29de46e3a 100644
+--- a/drivers/usb/core/Kconfig
++++ b/drivers/usb/core/Kconfig
+@@ -105,6 +105,12 @@ config USB_LEDS_TRIGGER_USBPORT
+ 	  trigger allows specifying list of USB ports that should turn on LED
+ 	  when some USB device gets connected.
+ 
++config USB_MONITOR_USBPORT
++	tristate "USB port monitor"
++	depends on USB
++	help
++	  This driver monitors USB device if lived or disconnected.
++
+ config USB_AUTOSUSPEND_DELAY
+ 	int "Default autosuspend delay"
+ 	depends on USB
+@@ -116,3 +122,10 @@ config USB_AUTOSUSPEND_DELAY
+ 	  The default value Linux has always had is 2 seconds.  Change
+ 	  this value if you want a different delay and cannot modify
+ 	  the command line or module parameter.
++
++config USB_RTK_HCD_TEST_MODE
++	bool "RTK Host CTS test mode"
++	default n
++	help
++	  Enable RTK USB Host CTS testing mode.
++
+diff --git a/drivers/usb/core/Makefile b/drivers/usb/core/Makefile
+index 18e874b04..f03f061d9 100644
+--- a/drivers/usb/core/Makefile
++++ b/drivers/usb/core/Makefile
+@@ -15,3 +15,4 @@ usbcore-$(CONFIG_ACPI)		+= usb-acpi.o
+ obj-$(CONFIG_USB)		+= usbcore.o
+ 
+ obj-$(CONFIG_USB_LEDS_TRIGGER_USBPORT)	+= ledtrig-usbport.o
++obj-$(CONFIG_USB_MONITOR_USBPORT)	+= monitor-usbport.o
+diff --git a/drivers/usb/core/hub.c b/drivers/usb/core/hub.c
+index 18ee3914b..67792f91f 100644
+--- a/drivers/usb/core/hub.c
++++ b/drivers/usb/core/hub.c
+@@ -411,6 +411,26 @@ static int get_hub_descriptor(struct usb_device *hdev,
+ 	return -EINVAL;
+ }
+ 
++#ifdef CONFIG_USB_RTK_HCD_TEST_MODE
++int get_hub_descriptor_port(struct usb_device *hdev, void *data, int size, int port1)
++{
++	struct usb_hub *hub = usb_hub_to_struct_hub(hdev);
++	struct usb_device *dev = hub->ports[port1 - 1]->child;
++
++	if (dev) {
++		memset(data, 0, size);
++
++		return usb_control_msg(dev, usb_rcvctrlpipe(dev, 0),
++				USB_REQ_GET_DESCRIPTOR, USB_DIR_IN,
++				(USB_DT_DEVICE << 8), 0, data, size,
++				USB_CTRL_GET_TIMEOUT);
++
++	} else
++		return 0;
++}
++EXPORT_SYMBOL_GPL(get_hub_descriptor_port);
++#endif //CONFIG_USB_RTK_HCD_TEST_MODE
++
+ /*
+  * USB 2.0 spec Section 11.24.2.1
+  */
+@@ -1129,6 +1149,17 @@ static void hub_activate(struct usb_hub *hub, enum hub_activation_type type)
+ 		if (status)
+ 			goto abort;
+ 
++#if 1 /* USB_PATCH_BY_RTK */
++	if (hdev) {
++		struct usb_hcd *hcd = bus_to_hcd(hdev->bus);
++
++		if (hcd->usb_phy && !hdev->parent)
++			usb_phy_notify_port_change(hcd->usb_phy, port1 - 1,
++				    portstatus, portchange);
++	}
++#endif /* USB_PATCH_BY_RTK */
++
++
+ 		if (udev || (portstatus & USB_PORT_STAT_CONNECTION))
+ 			dev_dbg(&port_dev->dev, "status %04x change %04x\n",
+ 					portstatus, portchange);
+@@ -4699,6 +4730,27 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
+ 				(udev->config) ? "reset" : "new", speed,
+ 				devnum, driver_name);
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	if (udev->speed < USB_SPEED_SUPER)
++		dev_notice(&udev->dev,
++				"%s %s USB device number %d using %s (%s)\n",
++				(udev->config) ? "reset" : "new", speed,
++				devnum, driver_name,
++				dev_name(udev->bus->controller->parent));
++
++	/* add for debug reset*/
++	if (udev->speed < USB_SPEED_SUPER && udev->config) {
++		dev_dbg(&udev->dev,
++			    "Start print dump_stack for %s %s USB device number %d "
++			    "using %s (%s)\n",
++			    (udev->config) ? "reset" : "new", speed,
++			    devnum, driver_name,
++			    dev_name(udev->bus->controller->parent));
++		dev_dbg(&udev->dev, "End print dump_stack for USB dev number %d",
++			    ({dump_stack(); devnum;}));
++	}
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	/* Set up TT records, if needed  */
+ 	if (hdev->tt) {
+ 		udev->tt = hdev->tt;
+@@ -4835,6 +4887,30 @@ hub_port_init(struct usb_hub *hub, struct usb_device *udev, int port1,
+ 					 (udev->rx_lanes == 2 && udev->tx_lanes == 2) ?
+ 							"x2" : "",
+ 					 devnum, driver_name);
++
++#ifdef CONFIG_USB_PATCH_ON_RTK
++				dev_notice(&udev->dev,
++						"%s SuperSpeed%s USB device number %d using %s at %s\n",
++						(udev->config) ? "To reset" : "Get new",
++					 (udev->speed == USB_SPEED_SUPER_PLUS) ? "Plus" : "",
++						devnum, driver_name,
++					     dev_name(udev->bus->controller->parent));
++
++				/* add for debug reset*/
++				if (udev->config) {
++					dev_dbg(&udev->dev,
++					    "Start print dump_stack for %s SuperSpeed%s "
++					    "USB device number %d "
++					    "using %s (%s)\n",
++					    (udev->config) ? "reset" : "new",
++					    (udev->speed == USB_SPEED_SUPER_PLUS) ? "Plus" : "",
++					    devnum, driver_name,
++					    dev_name(udev->bus->controller->parent));
++					dev_dbg(&udev->dev,
++					    "End print dump_stack for USB dev number %d",
++					    ({dump_stack(); devnum;}));
++				}
++#endif // CONFIG_USB_PATCH_ON_RTK
+ 			}
+ 
+ 			/* cope with hardware quirkiness:
+@@ -5357,6 +5433,11 @@ static void hub_port_connect_change(struct usb_hub *hub, int port1,
+ 	int status = -ENODEV;
+ 	int retval;
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	dev_notice(&port_dev->dev, "port %d, status %04x, change %04x, %s\n",
++			port1, portstatus, portchange, portspeed(hub, portstatus));
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	dev_dbg(&port_dev->dev, "status %04x, change %04x, %s\n", portstatus,
+ 			portchange, portspeed(hub, portstatus));
+ 
+@@ -5478,6 +5559,16 @@ static void port_event(struct usb_hub *hub, int port1)
+ 	if (hub_port_status(hub, port1, &portstatus, &portchange) < 0)
+ 		return;
+ 
++#if 1 /* USB_PATCH_BY_RTK */
++	if (hdev) {
++		struct usb_hcd *hcd = bus_to_hcd(hdev->bus);
++
++		if (hcd->usb_phy && !hdev->parent)
++			usb_phy_notify_port_change(hcd->usb_phy, port1 - 1,
++				    portstatus, portchange);
++	}
++#endif /* USB_PATCH_BY_RTK */
++
+ 	if (portchange & USB_PORT_STAT_C_CONNECTION) {
+ 		usb_clear_port_feature(hdev, port1, USB_PORT_FEAT_C_CONNECTION);
+ 		connect_change = 1;
+diff --git a/drivers/usb/core/quirks.c b/drivers/usb/core/quirks.c
+index baf80e2ac..ffcf300d0 100644
+--- a/drivers/usb/core/quirks.c
++++ b/drivers/usb/core/quirks.c
+@@ -217,6 +217,10 @@ static const struct usb_device_id usb_quirk_list[] = {
+ 	/* Microsoft LifeCam-VX700 v2.0 */
+ 	{ USB_DEVICE(0x045e, 0x0770), .driver_info = USB_QUIRK_RESET_RESUME },
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	/* Microsoft Wireless Mouse 5000 */
++	{ USB_DEVICE(0x045e, 0x0745), .driver_info = USB_QUIRK_RESET },
++#endif // CONFIG_USB_PATCH_ON_RTK
+ 	/* Microsoft Surface Dock Ethernet (RTL8153 GigE) */
+ 	{ USB_DEVICE(0x045e, 0x07c6), .driver_info = USB_QUIRK_NO_LPM },
+ 
+@@ -264,6 +268,11 @@ static const struct usb_device_id usb_quirk_list[] = {
+ 	/* Logitech Harmony 700-series */
+ 	{ USB_DEVICE(0x046d, 0xc122), .driver_info = USB_QUIRK_DELAY_INIT },
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	/* Logitech Wireless Mouse M705 */
++	{ USB_DEVICE(0x046d, 0xc52b), .driver_info = USB_QUIRK_RESET },
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	/* Philips PSC805 audio device */
+ 	{ USB_DEVICE(0x0471, 0x0155), .driver_info = USB_QUIRK_RESET_RESUME },
+ 
+@@ -494,6 +503,17 @@ static const struct usb_device_id usb_quirk_list[] = {
+ 	/* Blackmagic Design UltraStudio SDI */
+ 	{ USB_DEVICE(0x1edb, 0xbd4f), .driver_info = USB_QUIRK_NO_LPM },
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	/* Kingston DataTraveler 3.0 G4 */
++	{ USB_DEVICE_VER(0x0951, 0x1666, 0, 0x1100), .driver_info = USB_QUIRK_RESET_RESUME },
++
++	/* Kingston DataTraveler 3.0 G4 no support lpm */
++	{ USB_DEVICE(0x0951, 0x1666), .driver_info = USB_QUIRK_NO_LPM },
++
++	/* Toshiba no support lpm */
++	{ USB_DEVICE(0x0930, 0x6545), .driver_info = USB_QUIRK_NO_LPM },
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	/* Hauppauge HVR-950q */
+ 	{ USB_DEVICE(0x2040, 0x7200), .driver_info =
+ 			USB_QUIRK_CONFIG_INTF_STRINGS },
+diff --git a/drivers/usb/core/sysfs.c b/drivers/usb/core/sysfs.c
+index 8d134193f..8a56243f3 100644
+--- a/drivers/usb/core/sysfs.c
++++ b/drivers/usb/core/sysfs.c
+@@ -795,6 +795,194 @@ static ssize_t remove_store(struct device *dev, struct device_attribute *attr,
+ }
+ static DEVICE_ATTR_IGNORE_LOCKDEP(remove, S_IWUSR, NULL, remove_store);
+ 
++#ifdef CONFIG_USB_RTK_HCD_TEST_MODE
++#include <linux/slab.h>
++#include <linux/usb/ch11.h>
++#include <linux/usb/hcd.h>
++
++extern int get_hub_descriptor_port(struct usb_device *hdev, void *data, int size, int port1);
++
++// copy from hub.c and rename
++/*
++ * USB 2.0 spec Section 11.24.2.2
++ */
++static int hub_clear_port_feature(struct usb_device *hdev, int port1, int feature)
++{
++	return usb_control_msg(hdev, usb_sndctrlpipe(hdev, 0),
++			USB_REQ_CLEAR_FEATURE, USB_RT_PORT, feature, port1,
++			NULL, 0, 1000);
++}
++
++/*
++ * USB 2.0 spec Section 11.24.2.13
++ */
++static int hub_set_port_feature(struct usb_device *hdev, int port1, int feature)
++{
++	return usb_control_msg(hdev, usb_sndctrlpipe(hdev, 0),
++			USB_REQ_SET_FEATURE, USB_RT_PORT, feature, port1,
++			NULL, 0, 1000);
++}
++
++/* use a short timeout for hub/port status fetches */
++#define	USB_STS_TIMEOUT		1000
++#define	USB_STS_RETRIES		5
++
++static int get_port_status(struct usb_device *hdev, int port1,
++		struct usb_port_status *data)
++{
++	int i, status = -ETIMEDOUT;
++
++	for (i = 0; i < USB_STS_RETRIES &&
++			(status == -ETIMEDOUT || status == -EPIPE); i++) {
++		printk("get_port_status at port %d ...\n", port1);
++		status = usb_control_msg(hdev, usb_rcvctrlpipe(hdev, 0),
++			USB_REQ_GET_STATUS, USB_DIR_IN | USB_RT_PORT, 0, port1,
++			data, sizeof(*data), USB_STS_TIMEOUT);
++	}
++	return status;
++}
++
++enum {
++	TEST_RESET = 0,
++	TEST_TEST_J,
++	TEST_TEST_K,
++	TEST_TEST_SE0_NAK,
++	TEST_TEST_PACKET,
++	TEST_TEST_FORCE_ENABLE,
++	TEST_SUSPEND_RESUME,
++	TEST_SINGLE_STEP_GET_DEVICE_DESCRIPTOR,
++	TEST_PORT_RESET,
++	MAX_CTS_TEST_CASE,
++};
++
++static ssize_t  show_runTestMode (struct device *dev, struct device_attribute *attr, char *buf)
++{
++	struct usb_device *udev = udev = to_usb_device (dev);
++
++	if(udev->descriptor.bDeviceClass != USB_CLASS_HUB)
++		return sprintf (buf, "This node is not a HUB\n");
++
++	return sprintf (buf, "%s to runTestMode\n"
++		    "echo \"1 %d\" to run port1 HC_RESET command\n"
++		    "echo \"1 %d\" to run port1 TEST_J command\n"
++		    "echo \"1 %d\" ro run port1 TEST_K command\n"
++		    "echo \"1 %d\" to run port1 TEST_SE0_NAK command\n"
++		    "echo \"1 %d\" to run port1 TEST_PACKET command\n"
++		    "echo \"1 %d\" to run port1 TEST_FORCE_ENABLE command\n"
++		    "echo \"1 %d\" to run port1 SUSPEND/RESUME command\n"
++		    "echo \"1 %d\" to run port1 "
++		    "SINGLE_STEP_GET_DEVICE_DESCRIPTOR command\n"
++		    "echo \"1 %d\" to run port1 PORT_RESET command\n",
++		    dev_name(dev),
++		    TEST_RESET, TEST_TEST_J, TEST_TEST_K, TEST_TEST_SE0_NAK,
++		    TEST_TEST_PACKET,
++		    TEST_TEST_FORCE_ENABLE, TEST_SUSPEND_RESUME,
++		    TEST_SINGLE_STEP_GET_DEVICE_DESCRIPTOR,
++		    TEST_PORT_RESET);
++
++	return 0;
++}
++
++static ssize_t
++set_runTestMode (struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
++{
++	struct usb_device	*udev = udev = to_usb_device (dev);
++	int value, test_case;
++	unsigned int		port1 = 1;
++
++	if ((value = sscanf (buf, "%u", &port1)) != 1)
++		return -EINVAL;
++
++	buf += 2;
++
++	if ((value = sscanf (buf, "%u", &test_case)) != 1)
++		return -EINVAL;
++
++	if(udev->descriptor.bDeviceClass != USB_CLASS_HUB)
++		return value;
++
++	switch (test_case) {
++	case TEST_RESET:
++		printk("run HC_RESET (%d) to port %d ...\n", test_case, port1);
++		if (udev->bus != NULL) {
++			struct usb_hcd *hcd = bus_to_hcd(udev->bus);
++			int ret;
++			if (hcd != NULL && hcd->driver != NULL && hcd->driver->reset)
++				ret = hcd->driver->reset(hcd);
++			if (ret)
++				printk("run HC_RESET fail ...\n");
++		}
++
++	break;
++	case TEST_TEST_J:
++	case TEST_TEST_K:
++	case TEST_TEST_SE0_NAK:
++	case TEST_TEST_PACKET:
++	case TEST_TEST_FORCE_ENABLE:
++		usb_autoresume_device(udev);
++		printk("run USB_PORT_FEAT_TEST mode %d to port %d ...\n", test_case, port1);
++		hub_set_port_feature(udev,(test_case << 8) | port1, USB_PORT_FEAT_TEST);
++
++	break;
++	case TEST_SUSPEND_RESUME:
++		printk("run TEST_SUSPEND_RESUME to the port %d of the hub ...\n", port1);
++		msleep(15000);
++		printk("set USB_PORT_FEAT_SUSPEND to the port %d of the hub ...\n", port1);
++		hub_set_port_feature(udev, port1, USB_PORT_FEAT_SUSPEND);
++		printk("set OK !!!\n");
++		msleep(15000);
++		printk("clear USB_PORT_FEAT_SUSPEND to the port %d of the hub ...\n", port1);
++		hub_clear_port_feature(udev, port1, USB_PORT_FEAT_SUSPEND);
++		printk("clear OK !!!\n");
++		{
++			struct usb_port_status data;
++
++			printk("get_port_status port %d of the hub ...\n", port1);
++			msleep(USB_RESUME_TIMEOUT);
++			get_port_status(udev, port1, &data);
++		}
++	break;
++	case TEST_SINGLE_STEP_GET_DEVICE_DESCRIPTOR:
++	{
++		int i, size = 0x12;
++		unsigned char		*data;
++
++		printk("run SINGLE_STEP_GET_DEVICE_DESCRIPTOR to the port %d of the hub ...\n", port1);
++		data = (unsigned char*)kmalloc(size, GFP_KERNEL);
++		if (!data)
++			return -ENOMEM;
++		memset (data, 0, size);
++		get_hub_descriptor_port(udev, data, size, port1);
++
++		printk(" get device descriptor\n");
++		for( i = 0; i < size; i++)
++		{
++			printk(" %.2x", data[i]);
++			if((i % 15) == 0 && (i != 0))
++				printk("\n<1>");
++		}
++		printk("\n");
++
++		kfree(data);
++	}
++	break;
++	case TEST_PORT_RESET:
++		printk("run PORT_RESET (%d) to port %d ...\n", test_case, port1);
++		hub_clear_port_feature(udev, port1, USB_PORT_FEAT_POWER);
++		msleep(1000);
++		hub_set_port_feature(udev, port1, USB_PORT_FEAT_POWER);
++
++	break;
++	default:
++		printk("error test_case %d !!!\n", test_case);
++	break;
++	}
++
++	return (value < 0) ? value : count;
++}
++static DEVICE_ATTR(runTestMode, S_IRUGO | S_IWUSR,
++		show_runTestMode, set_runTestMode);
++#endif /* CONFIG_USB_RTK_HCD_TEST_MODE */
+ 
+ static struct attribute *dev_attrs[] = {
+ 	/* current configuration's attributes */
+@@ -830,6 +1018,9 @@ static struct attribute *dev_attrs[] = {
+ #ifdef CONFIG_OF
+ 	&dev_attr_devspec.attr,
+ #endif
++#ifdef CONFIG_USB_RTK_HCD_TEST_MODE
++	&dev_attr_runTestMode.attr,
++#endif // CONFIG_USB_RTK_HCD_TEST_MODE
+ 	NULL,
+ };
+ static struct attribute_group dev_attr_grp = {
+diff --git a/drivers/usb/dwc3/Kconfig b/drivers/usb/dwc3/Kconfig
+index 7a2304565..d16ff8320 100644
+--- a/drivers/usb/dwc3/Kconfig
++++ b/drivers/usb/dwc3/Kconfig
+@@ -53,6 +53,38 @@ endchoice
+ 
+ comment "Platform Glue Driver Support"
+ 
++config USB_DWC3_RTK
++	tristate "Realtek DWC3 Platform Driver"
++	default USB_DWC3
++	select RTK_USB2PHY
++	select RTK_USB3PHY
++	select USB_RTK_CTRL_MANAGER
++	help
++	  RTK SoCs with DesignWare Core USB3 IP inside,
++	  say 'Y' or 'M' if you have such device.
++
++config USB_DWC3_RTK_DUAL_ROLE
++	tristate "Realtek DWC3 Platform Dual Role Driver"
++	default USB_DWC3_RTK if (USB_DWC3_DUAL_ROLE)
++	depends on USB_DWC3_DUAL_ROLE
++	help
++	  RTK SoCs with DesignWare Core USB3 IP to suport drd mode,
++	  Support Realtek dwc3 drd mode to dynamical host/device switch.
++	  say 'Y' or 'M' if you have such device.
++
++config USB_DWC3_RTK_TYPE_C
++	bool "RTK DWC3 Type C Driver (dynamical host/device mode switch)"
++	default USB_DWC3_RTK if (USB_DWC3_DUAL_ROLE)
++	depends on USB_DWC3_DUAL_ROLE
++	help
++		Support Realtek dwc3 drd type c port
++
++config USB_TYPE_C_RTK_RTS5400
++	bool "RTK Type C Controller RTS5400"
++	depends on USB_RTK_DWC3_DRD_MODE
++	help
++		Support Realtek type c controller via RTS5400
++
+ config USB_DWC3_OMAP
+ 	tristate "Texas Instruments OMAP5 and similar Platforms"
+ 	depends on ARCH_OMAP2PLUS || COMPILE_TEST
+-- 
+2.17.1
+

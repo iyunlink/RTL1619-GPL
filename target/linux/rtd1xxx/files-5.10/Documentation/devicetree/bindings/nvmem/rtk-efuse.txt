@@ -1,0 +1,12 @@
+Realtek eFuse DT-bindings
+=========================
+
+See also 'Documentation/devicetree/bindings/nvmem/nvmem.txt'
+
+Requried properties :
+- compatible : shall contain one of the followings :
+	"realtek,efuse",
+	"realtek,rtd1619-otp"
+
+Optional properties:
+- realtek,sb2-lock : a hw lock for synchronization

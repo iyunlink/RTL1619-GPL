@@ -1,0 +1,47 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Realtek RTD13xx SoC family
+ *
+ * Copyright (c) 2019-2022 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd1319-pymparticles.dtsi"
+
+/ {
+	model = "Realtek Pym Particles EVB (4GB, TEE, Melon)";
+
+	memory@40000 {
+		device_type = "memory";
+		reg = <0x00040000 0x7ffc0000>, /* 4 GiB */
+		      <0x80020000 0x080e0000>,
+		      <0x8a100000 0x0defc000>,
+		      <0x98200000 0x00df0000>,
+		      <0x99000000 0x66000000>;
+	};
+
+	chosen {
+		linux,initrd-start = <0x03100000>;
+		linux,initrd-end = <0x03500000>;
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,460800 init=/init loop.max_part=7 androidboot.hardware=hank androidboot.storage=emmc loglevel=4";
+	};
+};
+
+&reserved_memory{
+	cma_resrved_4:linux,cma_4 {
+		compatible = "shared-dma-pool";
+		size = <0x02210000>;
+		alignment = <0x01000000>;
+		linux,contiguous-region;
+		reusable;
+	};
+};
+
+&rtk_ion{
+	rtk,ion-heap@7 {
+		cma_pool_4 {
+			rtk,cma-pool-extFlags = <RTK_FLAG_PROTECTED_DYNAMIC_TP>;
+		};
+	};
+};

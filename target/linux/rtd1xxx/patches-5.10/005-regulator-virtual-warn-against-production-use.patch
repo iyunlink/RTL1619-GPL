@@ -1,0 +1,47 @@
+From b582a1f9280ec059eff0b9f91084c8c721fbd005 Mon Sep 17 00:00:00 2001
+From: Vincent Whitchurch <vincent.whitchurch@axis.com>
+Date: Tue, 1 Mar 2022 12:18:30 +0100
+Subject: regulator: virtual: warn against production use
+
+This driver is only meant for debugging and testing.  Currently, it's
+not possible to use it without patching the kernel since it requires
+platform data, but we'll be adding devicetree support, so add a loud
+warning to make it clear that it's still only meant for debugging and
+testing.
+
+Signed-off-by: Vincent Whitchurch <vincent.whitchurch@axis.com>
+Link: https://lore.kernel.org/r/20220301111831.3742383-3-vincent.whitchurch@axis.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/regulator/virtual.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/drivers/regulator/virtual.c b/drivers/regulator/virtual.c
+index 52c5a0e0acd80..ccb38d99bb732 100644
+--- a/drivers/regulator/virtual.c
++++ b/drivers/regulator/virtual.c
+@@ -285,8 +285,21 @@ static int regulator_virtual_probe(struct platform_device *pdev)
+ {
+ 	char *reg_id = dev_get_platdata(&pdev->dev);
+ 	struct virtual_consumer_data *drvdata;
++	static bool warned;
+ 	int ret;
+ 
++	if (!warned) {
++		warned = true;
++		pr_warn("**********************************************************\n");
++		pr_warn("**   NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE   **\n");
++		pr_warn("**                                                      **\n");
++		pr_warn("** regulator-virtual-consumer is only for testing and   **\n");
++		pr_warn("** debugging.  Do not use it in a production kernel.    **\n");
++		pr_warn("**                                                      **\n");
++		pr_warn("**   NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE NOTICE   **\n");
++		pr_warn("**********************************************************\n");
++	}
++
+ 	drvdata = devm_kzalloc(&pdev->dev, sizeof(struct virtual_consumer_data),
+ 			       GFP_KERNEL);
+ 	if (drvdata == NULL)
+-- 
+2.17.1
+

@@ -1,0 +1,26 @@
+From 218bb7ffb951c8577a947eb4b4dfb80fce873364 Mon Sep 17 00:00:00 2001
+From: ram <pulumati@realtek.com>
+Date: Tue, 12 Apr 2022 19:26:44 +0800
+Subject: [PATCH 2/2] dec_o_fps,search_I_frm,search_I_err_tolerance
+
+---
+ libavcodec/rma_dec.c | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/libavcodec/rma_dec.c b/libavcodec/rma_dec.c
+index e7cee40..bf697d9 100755
+--- a/libavcodec/rma_dec.c
++++ b/libavcodec/rma_dec.c
+@@ -659,6 +659,9 @@ static const AVOption options[] = {
+     { "dec_o_width", "set the output width to RMA decoder", OFFSET(dec_o_width), AV_OPT_TYPE_INT,{ .i64 = 0 } , 0, 1920, VD },
+     { "dec_o_height", "set the output height to RMA decoder", OFFSET(dec_o_height), AV_OPT_TYPE_INT,{ .i64 = 0 } , 0, 1088, VD },
+     { "auto_resize", "keeping the original width/height ratio", OFFSET(auto_resize), AV_OPT_TYPE_INT,{ .i64 = 0 } , 0, 1, VD },
++    { "dec_o_fps", "set the output fps to RMA decoder", OFFSET(dec_o_fps), AV_OPT_TYPE_INT,{ .i64 = 0 } , 0, 60, VD },
++    { "search_I_frm", "Start to decode from first I frame", OFFSET(search_I_frm), AV_OPT_TYPE_INT,{ .i64 = 1 } , 0, 1, VD },
++    { "search_I_err_tolerance", "The percentage of error MBs that an I frame can display(only valid when search_I_frm is 1, default is 3)",OFFSET(search_I_err_tolerance), AV_OPT_TYPE_INT,{ .i64 = 3 } , 0, 100, VD },
+     { "rma_version", "Show verion information about RMA patch and libs", OFFSET(rma_version), AV_OPT_TYPE_INT,{ .i64 = 0 } , 0, 1, VD },
+     { NULL }
+ };
+-- 
+2.17.1
+

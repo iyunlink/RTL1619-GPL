@@ -1,0 +1,46 @@
+From cd681adb6805a4293f547f6da58447f051e76689 Mon Sep 17 00:00:00 2001
+From: phelic <phelic@realtek.com>
+Date: Thu, 28 Oct 2021 11:00:32 +0800
+Subject: [PATCH 1/1] Add option to enable 8125 SG TSO by default
+
+---
+ drivers/net/ethernet/realtek/Kconfig         | 7 +++++++
+ drivers/net/ethernet/realtek/r8125/r8125_n.c | 3 +++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/drivers/net/ethernet/realtek/Kconfig b/drivers/net/ethernet/realtek/Kconfig
+index a8955778f..fe6cf64b5 100644
+--- a/drivers/net/ethernet/realtek/Kconfig
++++ b/drivers/net/ethernet/realtek/Kconfig
+@@ -155,6 +155,13 @@ config R8125
+ 	  To compile this driver as a module, choose M here: the module
+ 	  will be called r8125.  This is recommended.
+ 
++config R8125_SG_TSO_ON
++	bool "Realtek 8125 enable scatter-gather and TCP segment offload"
++	depends on R8125
++	default y
++	help
++		Say Y here to enable R8125 SG and TSO feature by default.
++
+ config R8125_ACP
+ 	tristate "Realtek 8125 gigabit ethernet ACP support"
+ 	depends on R8125 && RTD16XXB_PCIE1_ACP
+diff --git a/drivers/net/ethernet/realtek/r8125/r8125_n.c b/drivers/net/ethernet/realtek/r8125/r8125_n.c
+index 799b56077..5d48d5d15 100644
+--- a/drivers/net/ethernet/realtek/r8125/r8125_n.c
++++ b/drivers/net/ethernet/realtek/r8125/r8125_n.c
+@@ -11606,6 +11606,10 @@ rtl8125_init_one(struct pci_dev *pdev,
+ #endif
+         }
+ 
++	if (IS_ENABLED(CONFIG_R8125_SG_TSO_ON))
++		dev->features |= (NETIF_F_SG | NETIF_F_TSO | NETIF_F_TSO6 |
++				  NETIF_F_TSO_MANGLEID) & dev->hw_features;
++
+ #ifdef ENABLE_DASH_SUPPORT
+         if (tp->DASH)
+                 AllocateDashShareMemory(dev);
+-- 
+2.17.1
+

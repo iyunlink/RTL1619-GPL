@@ -1,0 +1,29 @@
+Realtek Generic Power Control DT-bindings
+=========================================
+
+Required Properties:
+
+- compatible: should contain one of the following
+	"realtek,rtd1295-ve1-power",
+	"realtek,rtd1295-ve2-power",
+	"realtek,rtd1295-ve3-power",
+	"realtek,rtd1295-gpu-power",
+	"realtek,rtd1295-nat-power",
+	"realtek,rtd1395-ve1-power",
+	"realtek,rtd1395-ve2-power",
+	"realtek,rtd1395-gpu-power",
+	"realtek,rtd1619-ve3-power",
+	"realtek,rtd1619-gpu-power",
+	"realtek,rtd1619-hdmirx-power",
+	"realtek,rtd1319-ve1-power",
+	"realtek,rtd1619b-npu-power",
+	"realtek,rtd1619b-hifi0-power", and
+	"realtek,rtd1619b-hifi1-power".
+
+Optional Properties:
+
+- resets: a list of reset control.
+
+- reset-names: valid names are "reset", "bist", and "auto".
+
+- clocks: a list of clocks.

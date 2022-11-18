@@ -1,0 +1,201 @@
+From 69c395ac734284ef89a6ebb21fb4aee6ba60ccc6 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:43:04 +0800
+Subject: [PATCH 48/54] 829: usb: gadget: Add USB_PATCH_ON_RTK
+
+---
+ drivers/usb/gadget/composite.c             |  8 +++
+ drivers/usb/gadget/function/f_fs.c         |  5 ++
+ drivers/usb/gadget/function/f_sourcesink.c | 62 ++++++++++++++++++++++
+ drivers/usb/gadget/function/g_zero.h       |  3 ++
+ drivers/usb/gadget/udc/Kconfig             | 13 +++++
+ drivers/usb/gadget/udc/Makefile            |  1 +
+ 6 files changed, 92 insertions(+)
+
+diff --git a/drivers/usb/gadget/composite.c b/drivers/usb/gadget/composite.c
+index a98079990..346b7885c 100644
+--- a/drivers/usb/gadget/composite.c
++++ b/drivers/usb/gadget/composite.c
+@@ -346,6 +346,14 @@ int usb_add_function(struct usb_configuration *config,
+ 	if (value)
+ 		DBG(config->cdev, "adding '%s'/%p --> %d\n",
+ 				function->name, function, value);
++
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	/* add to print log*/
++	pr_notice("adding '%s'/%p to config '%s'/%p --> %s (ret=%d)\n",
++			function->name, function,
++			config->label, config, value?"Fail":"Ok", value);
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	return value;
+ }
+ EXPORT_SYMBOL_GPL(usb_add_function);
+diff --git a/drivers/usb/gadget/function/f_fs.c b/drivers/usb/gadget/function/f_fs.c
+index bb0d92837..c0eb40341 100644
+--- a/drivers/usb/gadget/function/f_fs.c
++++ b/drivers/usb/gadget/function/f_fs.c
+@@ -3394,7 +3394,12 @@ static int ffs_func_setup(struct usb_function *f,
+ 	__ffs_event_add(ffs, FUNCTIONFS_SETUP);
+ 	spin_unlock_irqrestore(&ffs->ev.waitq.lock, flags);
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	/* Fix adnroid adb push big file fail */
++	return 0;
++#else
+ 	return creq->wLength == 0 ? USB_GADGET_DELAYED_STATUS : 0;
++#endif // CONFIG_USB_PATCH_ON_RTK
+ }
+ 
+ static bool ffs_func_req_match(struct usb_function *f,
+diff --git a/drivers/usb/gadget/function/f_sourcesink.c b/drivers/usb/gadget/function/f_sourcesink.c
+index 2c65a9bb3..346975900 100644
+--- a/drivers/usb/gadget/function/f_sourcesink.c
++++ b/drivers/usb/gadget/function/f_sourcesink.c
+@@ -48,6 +48,9 @@ struct f_sourcesink {
+ 	unsigned buflen;
+ 	unsigned bulk_qlen;
+ 	unsigned iso_qlen;
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	unsigned bulk_maxburst;
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ };
+ 
+ static inline struct f_sourcesink *func_to_ss(struct usb_function *f)
+@@ -430,6 +433,14 @@ sourcesink_bind(struct usb_configuration *c, struct usb_function *f)
+ 		(ss->isoc_mult + 1) * (ss->isoc_maxburst + 1);
+ 	ss_iso_sink_desc.bEndpointAddress = fs_iso_sink_desc.bEndpointAddress;
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	if (ss->bulk_maxburst > 15)
++		ss->bulk_maxburst = 15;
++
++	ss_source_comp_desc.bMaxBurst = ss->bulk_maxburst;
++	ss_sink_comp_desc.bMaxBurst = ss->bulk_maxburst;
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ 	ret = usb_assign_descriptors(f, fs_source_sink_descs,
+ 			hs_source_sink_descs, ss_source_sink_descs,
+ 			ss_source_sink_descs);
+@@ -856,6 +867,9 @@ static struct usb_function *source_sink_alloc_func(
+ 	ss->buflen = ss_opts->bulk_buflen;
+ 	ss->bulk_qlen = ss_opts->bulk_qlen;
+ 	ss->iso_qlen = ss_opts->iso_qlen;
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	ss->bulk_maxburst = ss_opts->bulk_maxburst;
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 
+ 	ss->function.name = "source/sink";
+ 	ss->function.bind = sourcesink_bind;
+@@ -1216,6 +1230,51 @@ static ssize_t f_ss_opts_iso_qlen_store(struct config_item *item,
+ 
+ CONFIGFS_ATTR(f_ss_opts_, iso_qlen);
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++static ssize_t f_ss_opts_bulk_maxburst_show(struct config_item *item, char *page)
++{
++	struct f_ss_opts *opts = to_f_ss_opts(item);
++	int result;
++
++	mutex_lock(&opts->lock);
++	result = sprintf(page, "%u\n", opts->bulk_maxburst);
++	mutex_unlock(&opts->lock);
++
++	return result;
++}
++
++static ssize_t f_ss_opts_bulk_maxburst_store(struct config_item *item,
++				       const char *page, size_t len)
++{
++	struct f_ss_opts *opts = to_f_ss_opts(item);
++	int ret;
++	u8 num;
++
++	mutex_lock(&opts->lock);
++	if (opts->refcnt) {
++		ret = -EBUSY;
++		goto end;
++	}
++
++	ret = kstrtou8(page, 0, &num);
++	if (ret)
++		goto end;
++
++	if (num > 15) {
++		ret = -EINVAL;
++		goto end;
++	}
++
++	opts->bulk_maxburst = num;
++	ret = len;
++end:
++	mutex_unlock(&opts->lock);
++	return ret;
++}
++
++CONFIGFS_ATTR(f_ss_opts_, bulk_maxburst);
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ static struct configfs_attribute *ss_attrs[] = {
+ 	&f_ss_opts_attr_pattern,
+ 	&f_ss_opts_attr_isoc_interval,
+@@ -1225,6 +1284,9 @@ static struct configfs_attribute *ss_attrs[] = {
+ 	&f_ss_opts_attr_bulk_buflen,
+ 	&f_ss_opts_attr_bulk_qlen,
+ 	&f_ss_opts_attr_iso_qlen,
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	&f_ss_opts_attr_bulk_maxburst,
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 	NULL,
+ };
+ 
+diff --git a/drivers/usb/gadget/function/g_zero.h b/drivers/usb/gadget/function/g_zero.h
+index 98b8462ad..49c558520 100644
+--- a/drivers/usb/gadget/function/g_zero.h
++++ b/drivers/usb/gadget/function/g_zero.h
+@@ -36,6 +36,9 @@ struct f_ss_opts {
+ 	unsigned bulk_buflen;
+ 	unsigned bulk_qlen;
+ 	unsigned iso_qlen;
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	unsigned bulk_maxburst;
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 
+ 	/*
+ 	 * Read/write access to configfs attributes is handled by configfs.
+diff --git a/drivers/usb/gadget/udc/Kconfig b/drivers/usb/gadget/udc/Kconfig
+index 933e80d50..de36d084c 100644
+--- a/drivers/usb/gadget/udc/Kconfig
++++ b/drivers/usb/gadget/udc/Kconfig
+@@ -258,6 +258,19 @@ config USB_MV_U3D
+ 	  MARVELL PXA2128 Processor series include a super speed USB3.0 device
+ 	  controller, which support super speed USB peripheral.
+ 
++config USB_RTK_UDC
++	tristate "RTK USB2.0 Device Controller"
++	depends on ARCH_RTD129x
++	help
++		RTD129x Soc include a high speed USB2.0 OTG controller, which can be
++		configured as high speed or full speed USB peripheral.
++
++config USB_RTK_UDC_OTG_SWITCH
++	tristate "RTK USB2.0 HOST/Device switch by sysfs"
++	depends on USB_RTK_UDC && ARCH_RTD129x
++	help
++		Use sysfs to switch RTK 129x SOC USB2.0 OTG controller.
++	  
+ config USB_SNP_CORE
+ 	depends on (USB_AMD5536UDC || USB_SNP_UDC_PLAT)
+ 	depends on HAS_DMA
+diff --git a/drivers/usb/gadget/udc/Makefile b/drivers/usb/gadget/udc/Makefile
+index f5a7ce28a..5dac9ba04 100644
+--- a/drivers/usb/gadget/udc/Makefile
++++ b/drivers/usb/gadget/udc/Makefile
+@@ -43,3 +43,4 @@ obj-$(CONFIG_USB_SNP_UDC_PLAT) += snps_udc_plat.o
+ obj-$(CONFIG_USB_ASPEED_VHUB)	+= aspeed-vhub/
+ obj-$(CONFIG_USB_BDC_UDC)	+= bdc/
+ obj-$(CONFIG_USB_MAX3420_UDC)	+= max3420_udc.o
++obj-$(CONFIG_USB_RTK_UDC)	+= rtk-hsotg.o
+-- 
+2.17.1
+

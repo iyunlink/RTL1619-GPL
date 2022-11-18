@@ -1,0 +1,869 @@
+From 849e8572fab7a994d8da47051bac3dd18f02a134 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:44:37 +0800
+Subject: [PATCH 49/54] 830: usb: host: Add USB_PATCH_ON_RTK on ehci/ohci/xhci
+
+---
+ drivers/usb/host/Kconfig      |  20 ++++
+ drivers/usb/host/Makefile     |   1 +
+ drivers/usb/host/ehci-dbg.c   |  22 +++++
+ drivers/usb/host/ehci-q.c     |  59 +++++++++++
+ drivers/usb/host/ehci-sched.c |  13 +++
+ drivers/usb/host/ehci.h       |   3 +
+ drivers/usb/host/ohci-hcd.c   |   5 +
+ drivers/usb/host/ohci-hub.c   |  38 +++++++
+ drivers/usb/host/ohci.h       |  35 +++++++
+ drivers/usb/host/xhci-mem.c   |  65 ++++++++++++
+ drivers/usb/host/xhci-plat.c  |  21 ++++
+ drivers/usb/host/xhci-ring.c  | 180 ++++++++++++++++++++++++++++++++++
+ drivers/usb/host/xhci.h       |  15 +++
+ 13 files changed, 477 insertions(+)
+
+Index: linux-5.10.109/drivers/usb/host/Kconfig
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/Kconfig
++++ linux-5.10.109/drivers/usb/host/Kconfig
+@@ -213,6 +213,16 @@ config USB_EHCI_FSL
+ 	help
+ 	  Variation of ARC USB block used in some Freescale chips.
+ 
++config USB_EHCI_RTK
++	tristate "Support for RTK on-chip EHCI USB controller"
++	depends on USB_EHCI_HCD
++	select RTK_USB_RLE0599_PHY
++	help
++	  The Realtek chips are dual-role host/peripheral USB controllers.
++
++	  Enable this option to support this chip in host controller mode.
++	  If unsure, say N.
++
+ config USB_EHCI_MXC
+ 	tristate "Support for Freescale i.MX on-chip EHCI USB controller"
+ 	depends on ARCH_MXC || COMPILE_TEST
+@@ -429,6 +439,16 @@ config USB_OHCI_HCD
+ 
+ if USB_OHCI_HCD
+ 
++config USB_OHCI_RTK
++	bool "Support for RTK on-chip OHCI USB controller"
++	depends on USB_OHCI_HCD
++	select RTK_USB_RLE0599_PHY
++	help
++	  The Realtek chips are dual-role host/peripheral USB controllers.
++
++	  Enable this option to support this chip in host controller mode.
++	  If unsure, say N.
++
+ config USB_OHCI_HCD_OMAP1
+ 	tristate "OHCI support for OMAP1/2 chips"
+ 	depends on ARCH_OMAP1
+Index: linux-5.10.109/drivers/usb/host/Makefile
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/Makefile
++++ linux-5.10.109/drivers/usb/host/Makefile
+@@ -50,6 +50,7 @@ obj-$(CONFIG_USB_EHCI_EXYNOS)	+= ehci-ex
+ obj-$(CONFIG_USB_EHCI_HCD_AT91) += ehci-atmel.o
+ obj-$(CONFIG_USB_EHCI_TEGRA)	+= ehci-tegra.o
+ obj-$(CONFIG_USB_EHCI_BRCMSTB)	+= ehci-brcm.o
++obj-$(CONFIG_USB_EHCI_RTK)	+= ehci-rtk.o
+ 
+ obj-$(CONFIG_USB_OXU210HP_HCD)	+= oxu210hp-hcd.o
+ obj-$(CONFIG_USB_ISP116X_HCD)	+= isp116x-hcd.o
+Index: linux-5.10.109/drivers/usb/host/ehci-dbg.c
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/ehci-dbg.c
++++ linux-5.10.109/drivers/usb/host/ehci-dbg.c
+@@ -867,6 +867,28 @@ static ssize_t fill_registers_buffer(str
+ 	size -= temp;
+ 	next += temp;
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	temp = scnprintf (next, size, "CTRLDSSEGMENT %08x\n",
++			ehci_readl(ehci, &ehci->regs->segment));
++	size -= temp;
++	next += temp;
++
++	temp = scnprintf (next, size, "PERIODIC_LIST_BASE %08x\n",
++			ehci_readl(ehci, &ehci->regs->frame_list));
++	size -= temp;
++	next += temp;
++
++	temp = scnprintf (next, size, "ASYNC_LIST_ADDR %08x\n",
++			ehci_readl(ehci, &ehci->regs->async_next));
++	size -= temp;
++	next += temp;
++
++	temp = scnprintf (next, size, "CONFIG_FLAG %08x\n",
++			ehci_readl(ehci, &ehci->regs->configured_flag));
++	size -= temp;
++	next += temp;
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	for (i = 1; i <= HCS_N_PORTS(ehci->hcs_params); i++) {
+ 		temp = dbg_port_buf(scratch, sizeof(scratch), label, i,
+ 				ehci_readl(ehci,
+Index: linux-5.10.109/drivers/usb/host/ehci-q.c
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/ehci-q.c
++++ linux-5.10.109/drivers/usb/host/ehci-q.c
+@@ -33,6 +33,33 @@
+ 
+ /* fill a qtd, returning how much of the buffer we were able to queue up */
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++extern int RTK_ohci_force_suspend(const char *func);
++
++/* Add Workaround to fixed EHCI/OHCI Wrapper can't work simultaneously */
++int check_and_restore_async_list(struct ehci_hcd *ehci, const char *func, int line) {
++
++	int retry = 0;
++	if (ehci->fixed_async_list_addr_bug) {
++		for (retry = 0; retry < 5; retry++) {
++			u32 async_next = ehci_readl(ehci, &ehci->regs->async_next);
++			if (async_next == 0) {
++				ehci_err(ehci, "%s:%d #%d async_next is NULL ==> fixed async_next to HEAD=%x\n",
++					func, line, retry, (unsigned int) ehci->async->qh_dma);
++				ehci_writel(ehci, (u32) ehci->async->qh_dma,
++					&ehci->regs->async_next);
++				wmb();
++				mdelay(2);
++			} else {
++				break;
++			}
++		}
++	}
++	return 0;
++}
++#endif // CONFIG_USB_PATCH_ON_RTK
++
++
+ static int
+ qtd_fill(struct ehci_hcd *ehci, struct ehci_qtd *qtd, dma_addr_t buf,
+ 		  size_t len, int token, int maxpacket)
+@@ -952,6 +979,11 @@ done:
+ 
+ static void enable_async(struct ehci_hcd *ehci)
+ {
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	/* Add Workaround to fixed EHCI/OHCI Wrapper can't work simultaneously */
++	check_and_restore_async_list(ehci, __func__, __LINE__);
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	if (ehci->async_count++)
+ 		return;
+ 
+@@ -965,6 +997,11 @@ static void enable_async(struct ehci_hcd
+ 
+ static void disable_async(struct ehci_hcd *ehci)
+ {
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	/* Add Workaround to fixed EHCI/OHCI Wrapper can't work simultaneously */
++	check_and_restore_async_list(ehci, __func__, __LINE__);
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	if (--ehci->async_count)
+ 		return;
+ 
+@@ -983,6 +1020,12 @@ static void qh_link_async (struct ehci_h
+ 	__hc32		dma = QH_NEXT(ehci, qh->qh_dma);
+ 	struct ehci_qh	*head;
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	/* Add Workaround to fixed EHCI/OHCI Wrapper can't work simultaneously */
++	/* When EHCI schedule actived, force suspend OHCI*/
++	check_and_restore_async_list(ehci, __func__, __LINE__);
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	/* Don't link a QH if there's a Clear-TT-Buffer pending */
+ 	if (unlikely(qh->clearing_tt))
+ 		return;
+@@ -1111,6 +1154,12 @@ submit_async (
+ 	int			rc;
+ 
+ 	epnum = urb->ep->desc.bEndpointAddress;
++#ifdef CONFIG_USB_PATCH_ON_RTK
++#ifdef CONFIG_USB_OHCI_RTK
++	/* Add Workaround to fixed EHCI/OHCI Wrapper can't work simultaneously */
++	RTK_ohci_force_suspend(__func__);
++#endif
++#endif // CONFIG_USB_PATCH_ON_RTK
+ 
+ #ifdef EHCI_URB_TRACE
+ 	{
+@@ -1271,6 +1320,11 @@ static void single_unlink_async(struct e
+ 	prev->qh_next = qh->qh_next;
+ 	if (ehci->qh_scan_next == qh)
+ 		ehci->qh_scan_next = qh->qh_next.qh;
++
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	/* Add Workaround to fixed EHCI/OHCI Wrapper can't work simultaneously */
++	check_and_restore_async_list(ehci, __func__, __LINE__);
++#endif // CONFIG_USB_PATCH_ON_RTK
+ }
+ 
+ static void start_iaa_cycle(struct ehci_hcd *ehci)
+@@ -1300,6 +1354,11 @@ static void end_iaa_cycle(struct ehci_hc
+ 		ehci_writel(ehci, (u32) ehci->async->qh_dma,
+ 			    &ehci->regs->async_next);
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	/* Add Workaround to fixed EHCI/OHCI Wrapper can't work simultaneously */
++	check_and_restore_async_list(ehci, __func__, __LINE__);
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	/* The current IAA cycle has ended */
+ 	ehci->iaa_in_progress = false;
+ 
+Index: linux-5.10.109/drivers/usb/host/ehci-sched.c
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/ehci-sched.c
++++ linux-5.10.109/drivers/usb/host/ehci-sched.c
+@@ -6,6 +6,11 @@
+ 
+ /* this file is part of ehci-hcd.c */
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++/* Add Workaround to fixed EHCI/OHCI Wrapper can't work simultaneously */
++extern int RTK_ohci_force_suspend(const char *func);
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ /*-------------------------------------------------------------------------*/
+ 
+ /*
+@@ -909,6 +914,14 @@ static int intr_submit(
+ 	/* get endpoint and transfer/schedule data */
+ 	epnum = urb->ep->desc.bEndpointAddress;
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++#ifdef CONFIG_USB_OHCI_RTK
++	/* Add Workaround to fixed EHCI/OHCI Wrapper can't work simultaneously */
++	/* When EHCI schedule actived, force suspend OHCI*/
++	RTK_ohci_force_suspend(__func__);
++#endif
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	spin_lock_irqsave(&ehci->lock, flags);
+ 
+ 	if (unlikely(!HCD_HW_ACCESSIBLE(ehci_to_hcd(ehci)))) {
+Index: linux-5.10.109/drivers/usb/host/ehci.h
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/ehci.h
++++ linux-5.10.109/drivers/usb/host/ehci.h
+@@ -218,6 +218,9 @@ struct ehci_hcd {			/* one per controlle
+ 	unsigned		frame_index_bug:1; /* MosChip (AKA NetMos) */
+ 	unsigned		need_oc_pp_cycle:1; /* MPC834X port power */
+ 	unsigned		imx28_write_fix:1; /* For Freescale i.MX28 */
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	unsigned		fixed_async_list_addr_bug:1;
++#endif // CONFIG_USB_PATCH_ON_RTK
+ 	unsigned		is_aspeed:1;
+ 	unsigned		spurious_oc:1;
+ 
+Index: linux-5.10.109/drivers/usb/host/ohci-hcd.c
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/ohci-hcd.c
++++ linux-5.10.109/drivers/usb/host/ohci-hcd.c
+@@ -1271,6 +1271,11 @@ MODULE_LICENSE ("GPL");
+ #define TMIO_OHCI_DRIVER	ohci_hcd_tmio_driver
+ #endif
+ 
++#ifdef CONFIG_USB_OHCI_RTK
++#include "ohci-rtk.c"
++#define PLATFORM_DRIVER		ohci_rtk_driver
++#endif
++
+ static int __init ohci_hcd_mod_init(void)
+ {
+ 	int retval = 0;
+Index: linux-5.10.109/drivers/usb/host/ohci-hub.c
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/ohci-hub.c
++++ linux-5.10.109/drivers/usb/host/ohci-hub.c
+@@ -43,6 +43,13 @@
+ static void update_done_list(struct ohci_hcd *);
+ static void ohci_work(struct ohci_hcd *);
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++#ifdef CONFIG_USB_EHCI_RTK
++/* Add Workaround to fixed EHCI/OHCI Wrapper can't work simultaneously */
++extern bool RTK_ehci_check_schedule_actived(const char *func);
++#endif
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ #ifdef	CONFIG_PM
+ static int ohci_rh_suspend (struct ohci_hcd *ohci, int autostop)
+ __releases(ohci->lock)
+@@ -155,6 +162,20 @@ __acquires(ohci->lock)
+ 	int			status = -EINPROGRESS;
+ 	int			autostopped = ohci->autostop;
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++#ifdef CONFIG_USB_EHCI_RTK
++	/* Add Workaround to fixed EHCI/OHCI Wrapper can't work simultaneously */
++	/* When EHCI schedule actived, don't resume OHCI*/
++	if (RTK_ehci_check_schedule_actived(__func__)) {
++		ohci_info (ohci, "[Workaround] %s EHCI schedule actived, skip resume OHCI\n", __func__);
++		return 0;
++	} else {
++		ohci->resuming = 1;
++		init_completion(&ohci->resuming_done);
++	}
++#endif
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	ohci->autostop = 0;
+ 	ohci->hc_control = ohci_readl (ohci, &ohci->regs->control);
+ 
+@@ -295,6 +316,12 @@ skip_resume:
+ 	}
+ 
+ 	ohci->rh_state = OHCI_RH_RUNNING;
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	if (ohci->resuming) {
++		complete(&ohci->resuming_done);
++		ohci->resuming = 0;
++	}
++#endif // CONFIG_USB_PATCH_ON_RTK
+ 	return 0;
+ }
+ 
+@@ -521,6 +548,17 @@ int ohci_hub_status_data(struct usb_hcd
+ 	else
+ 		clear_bit(HCD_FLAG_POLL_RH, &hcd->flags);
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	/* add to check OHCI register deadbeef */
++	if (true) {
++		u32 status = roothub_portstatus (ohci, 0);
++		if (status == 0xdeadbeef) {
++			ohci_err(ohci, "OHCI register is 0x%x"
++					" to clear HCD_FLAG_POLL_RH", status);
++			clear_bit(HCD_FLAG_POLL_RH, &hcd->flags);
++		}
++	}
++#endif // CONFIG_USB_PATCH_ON_RTK
+ 
+ done:
+ 	spin_unlock_irqrestore (&ohci->lock, flags);
+Index: linux-5.10.109/drivers/usb/host/ohci.h
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/ohci.h
++++ linux-5.10.109/drivers/usb/host/ohci.h
+@@ -8,6 +8,10 @@
+  * This file is licenced under the GPL.
+  */
+ 
++#if 0//def CONFIG_USB_PATCH_ON_RTK
++#include <soc/realtek/rtd129x_lockapi.h>
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ /*
+  * __hc32 and __hc16 are "Host Controller" types, they may be equivalent to
+  * __leXX (normally) or __beXX (given OHCI_BIG_ENDIAN), depending on the
+@@ -362,6 +366,10 @@ enum ohci_rh_state {
+ struct ohci_hcd {
+ 	spinlock_t		lock;
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	void __iomem *wrap_reg;
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	/*
+ 	 * I/O memory used to communicate with the HC (dma-consistent)
+ 	 */
+@@ -399,6 +407,10 @@ struct ohci_hcd {
+ 	 * driver state
+ 	 */
+ 	enum ohci_rh_state	rh_state;
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	int 		resuming;
++	struct completion resuming_done;
++#endif // CONFIG_USB_PATCH_ON_RTK
+ 	int			num_ports;
+ 	int			load [NUM_INTS];
+ 	u32			hc_control;	/* copy of hc control reg */
+@@ -561,6 +573,18 @@ static inline struct usb_hcd *ohci_to_hc
+ static inline unsigned int _ohci_readl (const struct ohci_hcd *ohci,
+ 					__hc32 __iomem * regs)
+ {
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	//unsigned long flags;
++	//rtk_lockapi_lock(flags, __FUNCTION__); /* Add global lock for emmc issue*/
++	if (ohci->wrap_reg && readl(ohci->wrap_reg) == 0x0) {
++		ohci_err(ohci, "%s [USB Workaround] fixed force to enable "
++			    "ohci clock \n", __func__);
++		writel(0x40, ohci->wrap_reg);
++		mdelay(1);
++	}
++	//rtk_lockapi_unlock(flags,__FUNCTION__); /* Add global lock for emmc issue*/
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ #ifdef CONFIG_USB_OHCI_BIG_ENDIAN_MMIO
+ 	return big_endian_mmio(ohci) ?
+ 		readl_be (regs) :
+@@ -573,6 +597,17 @@ static inline unsigned int _ohci_readl (
+ static inline void _ohci_writel (const struct ohci_hcd *ohci,
+ 				 const unsigned int val, __hc32 __iomem *regs)
+ {
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	//unsigned long flags;
++	//rtk_lockapi_lock(flags, __FUNCTION__); /* Add global lock for emmc issue*/
++	if (ohci->wrap_reg && readl(ohci->wrap_reg) == 0x0) {
++		ohci_err(ohci, "%s [USB Workaround] fixed force to enable ohci clock \n", __func__);
++		writel(0x40, ohci->wrap_reg);
++		mdelay(1);
++	}
++	//rtk_lockapi_unlock(flags,__FUNCTION__); /* Add global lock for emmc issue*/
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ #ifdef CONFIG_USB_OHCI_BIG_ENDIAN_MMIO
+ 	big_endian_mmio(ohci) ?
+ 		writel_be (val, regs) :
+Index: linux-5.10.109/drivers/usb/host/xhci-mem.c
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/xhci-mem.c
++++ linux-5.10.109/drivers/usb/host/xhci-mem.c
+@@ -1057,6 +1057,71 @@ void xhci_copy_ep0_dequeue_into_input_ct
+ 	virt_dev = xhci->devs[udev->slot_id];
+ 	ep0_ctx = xhci_get_ep_ctx(xhci, virt_dev->in_ctx, 0);
+ 	ep_ring = virt_dev->eps[0].ring;
++
++#ifdef CONFIG_USB_PATCH_ON_RTK
++#if 1
++	/* [DEV_FIX]xhci control tranfer will error occasionally (1/45)
++	 * commit 0d2ae2abc867c1a31b7d280dc6429d18ba3770c5
++	 */
++	{
++		int i = 0;
++		struct xhci_ring *ring = ep_ring;
++		union xhci_trb *next;
++		union xhci_trb *trb;
++
++		ring->enq_seg = ring->first_seg;
++		ring->enqueue = ring->first_seg->trbs;
++		next = ring->enqueue;
++		wmb();
++		for (i = 0; i < (TRBS_PER_SEGMENT); i++) {
++			trb = &ring->first_seg->trbs[i];
++			trb->generic.field[3] &= cpu_to_le32(~TRB_CYCLE);
++		}
++		for (i = 0; i < (TRBS_PER_SEGMENT); i++) {
++			trb = &ring->first_seg->next->trbs[i];
++			trb->generic.field[3] &= cpu_to_le32(~TRB_CYCLE);
++		}
++		ring->cycle_state = 1;
++		wmb();
++	}
++#else
++	/* [DEV_FIx]set address fail after warm/hot reset
++	 * commit e7afd2f2d0093553379a9e2d6874ef11897a394f
++	 */
++	/* Fixed : USB reset issue, which will cause set address fail.
++	 * by Ted.
++	 */
++	{
++		int i = 0;
++		struct xhci_ring *ring = ep_ring;
++		union xhci_trb *next;
++		union xhci_trb *trb;
++		ring->enq_seg = ring->first_seg;
++		ring->enqueue = ring->first_seg->trbs;
++		next = ring->enqueue;
++		wmb();
++		for (i = 0; i < (TRBS_PER_SEGMENT -1); ++i) {
++			trb = &ring->first_seg->trbs[i];
++			trb->generic.field[0] = 0x0;
++			trb->generic.field[1] = 0x0;
++			trb->generic.field[2] = 0x0;
++			trb->generic.field[3] = 0x0;
++		}
++		wmb();
++
++		for (i = 0; i < (TRBS_PER_SEGMENT -1); ++i) {
++			trb = &ring->first_seg->next->trbs[i];
++			trb->generic.field[0] = 0x0;
++			trb->generic.field[1] = 0x0;
++			trb->generic.field[2] = 0x0;
++			trb->generic.field[3] = 0x0;
++		}
++		ring->cycle_state = 1;
++		wmb();
++	}
++#endif
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	/*
+ 	 * FIXME we don't keep track of the dequeue pointer very well after a
+ 	 * Set TR dequeue pointer, so we're setting the dequeue pointer of the
+Index: linux-5.10.109/drivers/usb/host/xhci-plat.c
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/xhci-plat.c
++++ linux-5.10.109/drivers/usb/host/xhci-plat.c
+@@ -300,6 +300,11 @@ static int xhci_plat_probe(struct platfo
+ 	/* imod_interval is the interrupt moderation value in nanoseconds. */
+ 	xhci->imod_interval = 40000;
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	xhci->usb3_trb_cache_size = DEFAULT_USB3_TRB_CACHE_SZIE;
++	xhci->usb2_trb_cache_size = DEFAULT_USB2_TRB_CACHE_SZIE;
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ 	/* Iterate over all parent nodes for finding quirks */
+ 	for (tmpdev = &pdev->dev; tmpdev; tmpdev = tmpdev->parent) {
+ 
+@@ -314,6 +319,18 @@ static int xhci_plat_probe(struct platfo
+ 
+ 		device_property_read_u32(tmpdev, "imod-interval-ns",
+ 					 &xhci->imod_interval);
++
++#ifdef CONFIG_USB_PATCH_ON_RTK
++		if (!device_property_read_u32(tmpdev, "usb3-trb-cache-size",
++					 &xhci->usb3_trb_cache_size))
++			dev_info(&pdev->dev, "set usb3_trb_cache_size=%d\n",
++				    xhci->usb3_trb_cache_size);
++
++		if (!device_property_read_u32(tmpdev, "usb2-trb-cache-size",
++					 &xhci->usb2_trb_cache_size))
++			dev_info(&pdev->dev, "set usb2_trb_cache_size=%d\n",
++				    xhci->usb2_trb_cache_size);
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 	}
+ 
+ 	hcd->usb_phy = devm_usb_get_phy_by_phandle(sysdev, "usb-phy", 0);
+@@ -328,6 +345,20 @@ static int xhci_plat_probe(struct platfo
+ 			goto put_usb3_hcd;
+ 	}
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	xhci->shared_hcd->usb_phy = devm_usb_get_phy_by_phandle(sysdev, "usb-phy", 1);
++	if (IS_ERR(xhci->shared_hcd->usb_phy)) {
++		ret = PTR_ERR(xhci->shared_hcd->usb_phy);
++		if (ret == -EPROBE_DEFER)
++			goto put_usb3_hcd;
++		xhci->shared_hcd->usb_phy = NULL;
++	} else {
++		ret = usb_phy_init(xhci->shared_hcd->usb_phy);
++		if (ret)
++			goto put_usb3_hcd;
++	}
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ 	hcd->tpl_support = of_usb_host_tpl_support(sysdev->of_node);
+ 	xhci->shared_hcd->tpl_support = hcd->tpl_support;
+ 	if (priv && (priv->quirks & XHCI_SKIP_PHY_INIT))
+@@ -363,6 +394,9 @@ dealloc_usb2_hcd:
+ 	usb_remove_hcd(hcd);
+ 
+ disable_usb_phy:
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	usb_phy_shutdown(xhci->shared_hcd->usb_phy);
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 	usb_phy_shutdown(hcd->usb_phy);
+ 
+ put_usb3_hcd:
+@@ -395,6 +429,10 @@ static int xhci_plat_remove(struct platf
+ 	pm_runtime_get_sync(&dev->dev);
+ 	xhci->xhc_state |= XHCI_STATE_REMOVING;
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	usb_phy_shutdown(xhci->shared_hcd->usb_phy);
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ 	usb_remove_hcd(shared_hcd);
+ 	xhci->shared_hcd = NULL;
+ 	usb_phy_shutdown(hcd->usb_phy);
+Index: linux-5.10.109/drivers/usb/host/xhci-ring.c
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/xhci-ring.c
++++ linux-5.10.109/drivers/usb/host/xhci-ring.c
+@@ -739,6 +739,68 @@ static void xhci_giveback_urb_in_irq(str
+ 	usb_hcd_giveback_urb(hcd, urb, status);
+ }
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++static void xhci_unmap_td_cache_buf(struct xhci_hcd *xhci,
++		struct xhci_ring *ring, struct xhci_td *td)
++{
++	struct device *dev = xhci_to_hcd(xhci)->self.controller;
++	struct urb *urb = td->urb;
++	size_t len;
++	struct xhci_cache_buf *cache_buf, *tmp;
++
++	if (usb_urb_dir_out(urb)) {
++		list_for_each_entry_safe(cache_buf, tmp, &td->cache_buf_list,
++			    list) {
++			if (!cache_buf)
++				continue;
++
++			list_del_init(&cache_buf->list);
++
++			if (!cache_buf->buf) {
++				xhci_err(xhci, "%s cache_buf buf is NULL\n",
++					    __func__);
++				kfree(cache_buf);
++				continue;
++			}
++
++			dma_unmap_single(dev, cache_buf->dma, cache_buf->len,
++				 DMA_TO_DEVICE);
++
++			kfree(cache_buf->buf);
++			kfree(cache_buf);
++		}
++		return;
++	}
++
++	list_for_each_entry_safe(cache_buf, tmp, &td->cache_buf_list,
++		    list) {
++		if (!cache_buf)
++			continue;
++
++		list_del_init(&cache_buf->list);
++
++		if (!cache_buf->buf) {
++			xhci_err(xhci, "%s cache_buf buf is NULL\n", __func__);
++			kfree(cache_buf);
++			continue;
++		}
++
++		dma_unmap_single(dev, cache_buf->dma, cache_buf->len,
++			 DMA_FROM_DEVICE);
++		/* for in tranfers we need to copy the data from cache to sg */
++		len = sg_pcopy_from_buffer(urb->sg, urb->num_sgs,
++			     cache_buf->buf,
++			     cache_buf->len, cache_buf->offs);
++		if (len != cache_buf->len)
++			xhci_warn(xhci, "WARN Wrong cache buffer read length: %zu != %d\n",
++				    len, cache_buf->len);
++
++		kfree(cache_buf->buf);
++		kfree(cache_buf);
++	}
++}
++#endif
++
+ static void xhci_unmap_td_bounce_buffer(struct xhci_hcd *xhci,
+ 		struct xhci_ring *ring, struct xhci_td *td)
+ {
+@@ -747,6 +809,10 @@ static void xhci_unmap_td_bounce_buffer(
+ 	struct urb *urb = td->urb;
+ 	size_t len;
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	xhci_unmap_td_cache_buf(xhci, ring, td);
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ 	if (!ring || !seg || !urb)
+ 		return;
+ 
+@@ -1727,6 +1793,22 @@ static void handle_port_status(struct xh
+ 			xhci->devs[slot_id]->flags |= VDEV_PORT_ERROR;
+ 	}
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	if (hcd->speed >= HCD_USB3 && (portsc & PORT_PLS_MASK) == XDEV_INACTIVE &&
++		   (portsc & PORT_PLC)) {
++		bus_state->port_remote_wakeup |= (1 << hcd_portnum);
++		xhci_dbg(xhci, "Get port link state XDEV_INACTIVE and port link change "
++			    "to set port_remote_wakeup (port_status=0x%x)\n", portsc);
++		if (bus_state->port_remote_wakeup & (1 << hcd_portnum)) {
++			bus_state->port_remote_wakeup &=
++				~(1 << hcd_portnum);
++			xhci_test_and_clear_bit(xhci, port, PORT_PLC);
++			usb_wakeup_notification(hcd->self.root_hub,
++					hcd_portnum + 1);
++		}
++	}
++#endif // CONFIG_USB_PATCH_ON_RTK
++
+ 	if ((portsc & PORT_PLC) && (portsc & PORT_PLS_MASK) == XDEV_RESUME) {
+ 		xhci_dbg(xhci, "port resume event for port %d\n", port_id);
+ 
+@@ -3128,6 +3210,9 @@ static int prepare_transfer(struct xhci_
+ 
+ 	INIT_LIST_HEAD(&td->td_list);
+ 	INIT_LIST_HEAD(&td->cancelled_td_list);
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	INIT_LIST_HEAD(&td->cache_buf_list);
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 
+ 	if (td_index == 0) {
+ 		ret = usb_hcd_link_urb_to_ep(bus_to_hcd(urb->dev->bus), urb);
+@@ -3311,6 +3396,63 @@ static u32 xhci_td_remainder(struct xhci
+ 	return (total_packet_count - ((transferred + trb_buff_len) / maxp));
+ }
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++static u64 xhci_align_cache_buf(struct xhci_hcd *xhci,
++	    struct urb *urb, u32 enqd_len, u32 hw_limit_buf_len,
++	    u32 *trb_buff_len, struct xhci_td *td)
++{
++	struct device *dev = xhci_to_hcd(xhci)->self.controller;
++	struct xhci_cache_buf *cache_buf;
++	unsigned int max_pkt;
++	u32 new_buff_len;
++	size_t len;
++
++	max_pkt = usb_endpoint_maxp(&urb->ep->desc);
++
++	cache_buf = kzalloc(sizeof(struct xhci_cache_buf), GFP_KERNEL);
++	if (!cache_buf)
++		return -ENOMEM;
++	list_add(&cache_buf->list, &td->cache_buf_list);
++
++	cache_buf->buf = kzalloc(max_pkt, GFP_DMA | GFP_ATOMIC);
++	if (!cache_buf->buf)
++		return -ENOMEM;
++
++	new_buff_len = max_pkt - (enqd_len % max_pkt);
++
++	if (new_buff_len > (urb->transfer_buffer_length - enqd_len))
++		new_buff_len = (urb->transfer_buffer_length - enqd_len);
++
++	/* create a max max_pkt sized cache buffer pointed to by last trb */
++	if (usb_urb_dir_out(urb)) {
++		len = sg_pcopy_to_buffer(urb->sg, urb->num_sgs,
++				   cache_buf->buf, new_buff_len, enqd_len);
++		if (len != new_buff_len)
++			xhci_warn(xhci,
++				"WARN Wrong cache buffer write length: %zu != %d\n",
++				len, new_buff_len);
++		cache_buf->dma = dma_map_single(dev, cache_buf->buf,
++						 max_pkt, DMA_TO_DEVICE);
++	} else {
++		cache_buf->dma = dma_map_single(dev, cache_buf->buf,
++						 max_pkt, DMA_FROM_DEVICE);
++	}
++
++	if (dma_mapping_error(dev, cache_buf->dma)) {
++		/* try without aligning. Some host controllers survive */
++		xhci_warn(xhci, "Failed mapping cache buffer, not aligning\n");
++		return 0;
++	}
++	*trb_buff_len = new_buff_len;
++
++	cache_buf->len = new_buff_len;
++	cache_buf->offs = enqd_len;
++
++	xhci_dbg(xhci, "cache buf align, new buff len %d\n", *trb_buff_len);
++
++	return cache_buf->dma;
++}
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 
+ static int xhci_align_td(struct xhci_hcd *xhci, struct urb *urb, u32 enqd_len,
+ 			 u32 *trb_buff_len, struct xhci_segment *seg)
+@@ -3399,6 +3541,24 @@ int xhci_queue_bulk_tx(struct xhci_hcd *
+ 	int sent_len, ret;
+ 	u32 field, length_field, remainder;
+ 	u64 addr, send_addr;
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	int max_hw_limit_num_trbs, hw_limit_num_trbs = 0;
++	int max_hw_limit_buf_len, hw_limit_buf_len = 0;
++
++	max_hw_limit_buf_len = usb_endpoint_maxp(&urb->ep->desc);
++	if (urb->dev->speed >= USB_SPEED_SUPER)
++		max_hw_limit_num_trbs = xhci->usb3_trb_cache_size;
++	else
++		max_hw_limit_num_trbs = xhci->usb2_trb_cache_size;
++
++	/* If max_hw_limit_num_trbs is zero, disable max_hw_limit_num_trbs */
++	if (!max_hw_limit_num_trbs)
++		max_hw_limit_num_trbs = INT_MAX;
++
++	/* A safe limit is trb cache size minus 3 */
++	max_hw_limit_num_trbs -= 3;
++
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 
+ 	ring = xhci_urb_to_transfer_ring(xhci, urb);
+ 	if (!ring)
+@@ -3465,6 +3625,28 @@ int xhci_queue_bulk_tx(struct xhci_hcd *
+ 		 */
+ 		if (enqd_len + trb_buff_len < full_len) {
+ 			field |= TRB_CHAIN;
++
++#ifdef CONFIG_USB_PATCH_ON_RTK
++			hw_limit_num_trbs++;
++			hw_limit_buf_len += trb_buff_len;
++
++			if (hw_limit_buf_len >= max_hw_limit_buf_len) {
++				hw_limit_buf_len = (enqd_len + trb_buff_len) %
++					    max_hw_limit_buf_len;
++				hw_limit_num_trbs = 0;
++			} else if (hw_limit_num_trbs >= max_hw_limit_num_trbs) {
++				send_addr = xhci_align_cache_buf(xhci, urb,
++					    enqd_len, hw_limit_buf_len,
++					    &trb_buff_len, td);
++				if (send_addr <= 0)
++					return send_addr;
++
++				hw_limit_buf_len = (enqd_len + trb_buff_len) %
++					    max_hw_limit_buf_len;
++				hw_limit_num_trbs = 0;
++			}
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ 			if (trb_is_link(ring->enqueue + 1)) {
+ 				if (xhci_align_td(xhci, urb, enqd_len,
+ 						  &trb_buff_len,
+@@ -3472,6 +3654,12 @@ int xhci_queue_bulk_tx(struct xhci_hcd *
+ 					send_addr = ring->enq_seg->bounce_dma;
+ 					/* assuming TD won't span 2 segs */
+ 					td->bounce_seg = ring->enq_seg;
++#ifdef CONFIG_USB_PATCH_ON_RTK
++					hw_limit_buf_len = (enqd_len +
++						    trb_buff_len) %
++						    max_hw_limit_buf_len;
++					hw_limit_num_trbs = 0;
++#endif
+ 				}
+ 			}
+ 		}
+Index: linux-5.10.109/drivers/usb/host/xhci.h
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/host/xhci.h
++++ linux-5.10.109/drivers/usb/host/xhci.h
+@@ -1535,6 +1535,17 @@ struct xhci_segment {
+ 	unsigned int		bounce_len;
+ };
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++struct xhci_cache_buf {
++	dma_addr_t		dma;
++	void			*buf;
++	unsigned int		offs;
++	unsigned int		len;
++
++	struct list_head list;
++};
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ struct xhci_td {
+ 	struct list_head	td_list;
+ 	struct list_head	cancelled_td_list;
+@@ -1545,6 +1556,10 @@ struct xhci_td {
+ 	struct xhci_segment	*bounce_seg;
+ 	/* actual_length of the URB has already been set */
+ 	bool			urb_length_set;
++
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	struct list_head cache_buf_list;
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ };
+ 
+ /* xHCI command default timeout value */
+@@ -1908,6 +1923,13 @@ struct xhci_hcd {
+ /* Compliance Mode Timer Triggered every 2 seconds */
+ #define COMP_MODE_RCVRY_MSECS 2000
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	int usb3_trb_cache_size;
++	int usb2_trb_cache_size;
++#define DEFAULT_USB3_TRB_CACHE_SZIE 16
++#define DEFAULT_USB2_TRB_CACHE_SZIE 10
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ 	struct dentry		*debugfs_root;
+ 	struct dentry		*debugfs_slots;
+ 	struct list_head	regset_list;

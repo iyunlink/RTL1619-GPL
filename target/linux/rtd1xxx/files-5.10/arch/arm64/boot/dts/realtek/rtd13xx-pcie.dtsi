@@ -1,0 +1,177 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Realtek RTD13xx SoC family
+ *
+ * Copyright (c) 2019-2020 Realtek Semiconductor Corp.
+ */
+
+&rbus {
+	pcie: pcie@60000 {
+		compatible = "realtek,rtd13xx-pcie-slot1", "syscon";
+		reg = <0x60000 0x00001000>;
+		syscon = <&iso>;
+		interrupt-names = "rtk-pcie0-intr";
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &gic GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 61 4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pcie_clk_pins_0>;
+		bus-range = <0x00 0xff>;
+		linux,pci-domain = <0>;
+		device_type = "pci";
+		perst-gpios = <&gpio 19 GPIO_ACTIVE_HIGH>;
+		#size-cells = <2>;
+		#address-cells = <3>;
+		num-lanes = <1>;
+		phys = <&pcie0_phy>;
+		speed-mode = <1>; // 0:GEN1, 1:GEN2
+		debug-mode = <0>;
+		ranges = <0x02000000 0x0 0x98062000 0x00062000 0x0 0x0001E000>,
+			 <0x01000000 0x0 0x00030000 0x10030000 0x0 0x00010000>;
+		resets = <&cc RTD1319_CRT_RSTN_PCIE0>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_CORE>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_POWER>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_NONSTITCH>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_STITCH>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_SGMII_MDIO>;
+
+		reset-names = "rstn",
+			"core",
+			"power",
+			"nonstitch",
+			"stitch",
+			"sgmii_mdio";
+		clocks = <&cc RTD1319_CRT_CLK_EN_PCIE0>;
+		status = "disabled";
+	};
+
+	pcie1: pcie@a0000 {
+		compatible = "realtek,rtd13xx-pcie-slot1", "syscon";
+		reg = <0xA0000 0x00001000>;
+		syscon = <&m2tmx>;
+		interrupt-names = "rtk-pcie1-intr";
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &gic GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 62 4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pcie_clk_pins_1>;
+		bus-range = <0x00 0xff>;
+		linux,pci-domain = <1>;
+		device_type = "pci";
+		perst-gpios = <&gpio 80 GPIO_ACTIVE_HIGH>;
+		#size-cells = <2>;
+		#address-cells = <3>;
+		num-lanes = <1>;
+		phys = <&pcie1_phy>;
+		speed-mode = <1>; // 0:GEN1, 1:GEN2
+		debug-mode = <0>;
+		ranges = <0x03000000 0x0 0x980A2000 0x000A2000 0x0 0x0001E000>,
+			 <0x01000000 0x0 0x00040000 0x10040000 0x0 0x00010000>;
+		workaround = <0>;
+		workaround-ranges = <0x03000000 0x0 0xC0000000 0xC0000000 0x0 0x00100000
+				     0x01000000 0x0 0x00040000 0x10040000 0x0 0x00010000>;
+		resets = <&cc RTD1319_CRT_RSTN_PCIE1>,
+			<&cc RTD1319_CRT_RSTN_PCIE1_CORE>,
+			<&cc RTD1319_CRT_RSTN_PCIE1_POWER>,
+			<&cc RTD1319_CRT_RSTN_PCIE1_NONSTITCH>,
+			<&cc RTD1319_CRT_RSTN_PCIE1_STITCH>;
+
+		reset-names = "rstn",
+			"core",
+			"power",
+			"nonstitch",
+			"stitch";
+		clocks = <&cc RTD1319_CRT_CLK_EN_PCIE1>;
+		status = "okay";
+	};
+
+	pcie2: pcie@c0000 {
+		compatible = "realtek,rtd13xx-pcie-slot2", "syscon";
+		reg = <0xC0000 0x00001000>;
+		syscon = <&m2tmx>;
+		interrupt-names = "rtk-pcie2-intr";
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &gic GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 62 4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pcie_clk_pins_2>;
+		bus-range = <0x00 0xff>;
+		linux,pci-domain = <2>;
+		device_type = "pci";
+		perst-gpios = <&gpio 81 GPIO_ACTIVE_HIGH>;
+		#size-cells = <2>;
+		#address-cells = <3>;
+		num-lanes = <1>;
+		phys = <&pcie2_phy>;
+		speed-mode = <1>; // 0:GEN1, 1:GEN2
+		debug-mode = <0>;
+		ranges = <0x02000000 0x0 0x980C2000 0x000C2000 0x0 0x0001E000>,
+			 <0x01000000 0x0 0x00050000 0x10050000 0x0 0x00010000>;
+		workaround = <0>;
+		workaround-ranges = <0x02000000 0x0 0xC1000000 0xC1000000 0x0 0x00100000
+				     0x01000000 0x0 0x00050000 0x10050000 0x0 0x00010000>;
+		resets = <&cc RTD1319_CRT_RSTN_PCIE2>,
+			<&cc RTD1319_CRT_RSTN_PCIE2_CORE>,
+			<&cc RTD1319_CRT_RSTN_PCIE2_POWER>,
+			<&cc RTD1319_CRT_RSTN_PCIE2_NONSTITCH>,
+			<&cc RTD1319_CRT_RSTN_PCIE2_STITCH>;
+
+		reset-names = "rstn",
+			"core",
+			"power",
+			"nonstitch",
+			"stitch";
+		clocks = <&cc RTD1319_CRT_CLK_EN_PCIE2>;
+		status = "okay";
+	};
+
+	pcie_trans: pcie_trans@70000 {
+		compatible = "realtek,rtd13xx-pcie-trans";
+		reg = <0x70000 0x10000>,
+		      <0xb0000 0x10000>,
+		      <0xd0000 0x10000>;
+		syscon = <&pcie>,
+			<&pcie1>,
+			<&pcie2>;
+		status = "disabled";
+	};
+};
+
+/ {
+	pcie0_phy: pcie0_phy {
+		compatible = "realtek,rtd13xx-pcie-slot0-phy";
+		syscon =  <&pcie>;
+		resets = <&cc RTD1319_CRT_RSTN_PCIE0_PHY>,
+			 <&cc RTD1319_CRT_RSTN_PCIE0_PHY_MDIO>;
+		reset-names = "phy",
+			      "phy_mdio";
+		#phy-cells = <0>;
+		status = "okay";
+	};
+
+	pcie1_phy: pcie1_phy {
+		compatible = "realtek,rtd13xx-pcie-slot1-phy";
+		syscon =  <&pcie1>;
+		resets = <&cc RTD1319_CRT_RSTN_PCIE1_PHY>,
+			 <&cc RTD1319_CRT_RSTN_PCIE1_PHY_MDIO>;
+		reset-names = "phy",
+			      "phy_mdio";
+		#phy-cells = <0>;
+		status = "okay";
+	};
+
+	pcie2_phy: pcie2_phy {
+		compatible = "realtek,rtd13xx-pcie-slot2-phy";
+		syscon =  <&pcie2>;
+		resets = <&cc RTD1319_CRT_RSTN_PCIE2_PHY>,
+			 <&cc RTD1319_CRT_RSTN_PCIE2_PHY_MDIO>;
+		reset-names = "phy",
+			      "phy_mdio";
+		#phy-cells = <0>;
+		status = "okay";
+	};
+
+};

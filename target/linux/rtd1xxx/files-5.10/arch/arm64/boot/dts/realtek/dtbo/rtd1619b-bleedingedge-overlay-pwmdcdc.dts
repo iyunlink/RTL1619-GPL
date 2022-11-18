@@ -1,0 +1,95 @@
+/dts-v1/;
+/plugin/;
+
+&i2c_0 {
+	status = "disabled";
+};
+
+&apw7899 {
+	status = "disabled";
+};
+
+&{/} {
+	rtd1619b-bleedingedge-overlay-pwmdcdc;
+
+	cpu_supp: pwm-regulator {
+		compatible = "pwm-regulator";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwm2_0_pins>;
+		pwms = <&pwm 2 8149>;
+		status = "okay";
+
+		regulator-name = "cpudvs";
+		regulator-min-microvolt = <750000>;
+		regulator-max-microvolt = <1200000>;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-ramp-delay = <400>;
+
+		voltage-table =
+			<1200000 0>,
+			<1187500 2>,
+			<1175000 5>,
+			<1162500 7>,
+			<1150000 10>,
+			<1137500 11>,
+			<1125000 14>,
+			<1112500 16>,
+			<1100000 19>,
+			<1087500 20>,
+			<1075000 23>,
+			<1062500 26>,
+			<1050000 28>,
+			<1037500 30>,
+			<1025000 32>,
+			<1012500 35>,
+			<1000000 37>,
+			<987500 40>,
+			<975000 41>,
+			<962500 44>,
+			<950000 47>,
+			<937500 49>,
+			<925000 50>,
+			<912500 53>,
+			<900000 55>,
+			<887500 58>,
+			<875000 60>,
+			<862500 62>,
+			<850000 64>,
+			<837500 67>,
+			<825000 70>,
+			<812500 71>,
+			<800000 74>,
+			<787500 76>,
+			<775000 79>,
+			<762500 80>,
+			<750000 83>;
+	};
+};
+
+&cpu0 {
+	cpu-supply = <&cpu_supp>;
+};
+
+&cpu1 {
+	cpu-supply = <&cpu_supp>;
+};
+
+&cpu2 {
+	cpu-supply = <&cpu_supp>;
+};
+
+&cpu3 {
+	cpu-supply = <&cpu_supp>;
+};
+
+&pwm {
+	status = "okay";
+
+	pwm_2 {
+		enable = <1>;
+		clkout_div = <0x6d>;
+		clksrc_div = <0x00>;
+		duty_rate = <55>;
+	};
+};

@@ -1,0 +1,47 @@
+From 33896a6e75d8cfd2a39c32b3044739f043054c4d Mon Sep 17 00:00:00 2001
+From: Cheng-Yu Lee <cylee12@realtek.com>
+Date: Thu, 5 May 2022 10:39:04 +0800
+Subject: firmware: add realtek ifcp firmware driver
+
+Change-Id: I15114d75e50630ad6b45bc3713ee2c0195e6c172
+---
+ drivers/firmware/Kconfig       |   6 ++
+ drivers/firmware/Makefile      |   1 +
+ drivers/firmware/rtk_ifcp.c    | 115 +++++++++++++++++++++++++++++++++
+ include/soc/realtek/rtk_ifcp.h |   6 ++
+ 4 files changed, 128 insertions(+)
+ create mode 100644 drivers/firmware/rtk_ifcp.c
+ create mode 100644 include/soc/realtek/rtk_ifcp.h
+
+diff --git a/drivers/firmware/Kconfig b/drivers/firmware/Kconfig
+index c08968c5ddf8c..bbbc737d12bf4 100644
+--- a/drivers/firmware/Kconfig
++++ b/drivers/firmware/Kconfig
+@@ -296,6 +296,12 @@ config TURRIS_MOX_RWTM
+ 	  other manufacturing data and also utilize the Entropy Bit Generator
+ 	  for hardware random number generation.
+ 
++config RTK_IFCP
++	tristate "Realtek IFCP firmware driver"
++	depends on ARCH_REALTEK && HAVE_ARM_SMCCC
++	help
++	  Realtek IFCP firmware driver
++
+ source "drivers/firmware/broadcom/Kconfig"
+ source "drivers/firmware/google/Kconfig"
+ source "drivers/firmware/efi/Kconfig"
+diff --git a/drivers/firmware/Makefile b/drivers/firmware/Makefile
+index 5e013b6a3692e..267aac8b34a9b 100644
+--- a/drivers/firmware/Makefile
++++ b/drivers/firmware/Makefile
+@@ -21,6 +21,7 @@ obj-$(CONFIG_QCOM_SCM)		+= qcom_scm.o qcom_scm-smc.o qcom_scm-legacy.o
+ obj-$(CONFIG_TI_SCI_PROTOCOL)	+= ti_sci.o
+ obj-$(CONFIG_TRUSTED_FOUNDATIONS) += trusted_foundations.o
+ obj-$(CONFIG_TURRIS_MOX_RWTM)	+= turris-mox-rwtm.o
++obj-$(CONFIG_RTK_IFCP)		+= rtk_ifcp.o
+ 
+ obj-y				+= arm_scmi/
+ obj-y				+= broadcom/
+-- 
+2.17.1
+

@@ -1,0 +1,32 @@
+Index: linux-5.10.109/arch/arm64/boot/dts/realtek/rtd13xx.dtsi
+===================================================================
+--- linux-5.10.109.orig/arch/arm64/boot/dts/realtek/rtd13xx.dtsi
++++ linux-5.10.109/arch/arm64/boot/dts/realtek/rtd13xx.dtsi
+@@ -956,6 +956,11 @@
+ 			log_check_period = <500>; /* ms */
+ 		};
+ 	};
++
++	rbus-uio {
++		reg = <0x98000000 0x200000>;
++		compatible = "generic-uio";
++	};
+ };
+ 
+ &crt {
+Index: linux-5.10.109/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+===================================================================
+--- linux-5.10.109.orig/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
++++ linux-5.10.109/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+@@ -1275,6 +1275,11 @@
+ 			duty_rate = <50>; /* default duty_rate 0 ~ 100 */
+ 		};
+ 	};
++
++	rbus-uio {
++		reg = <0x98000000 0x200000>;
++		compatible = "generic-uio";
++	};
+ };
+ 
+ &sb2 {

@@ -1,0 +1,14 @@
+Realtek RXI-316 PMU dt-bindings
+===============================
+
+Required properties:
+- compatible:
+        "realtek,rtk-rxi316-pmu"
+- reg: address range of RXI-316 PMU
+
+Example:
+
+	rxi316_pmu: rxi316-pmu@92000 {
+		compatible = "realtek,rxi316-pmu";
+		reg = <0x92000 0x0 0x1000>;
+	};

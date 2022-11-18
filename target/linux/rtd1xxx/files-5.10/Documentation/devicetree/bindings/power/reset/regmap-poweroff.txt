@@ -1,0 +1,29 @@
+Simple Regmap Poweroff
+======================
+
+This is a simple regmap poweroff driver, which gets regmap from the parent
+device and sets a register with value.
+
+Required properties:
+- compatible: should contain "regmap-poweroff"
+- poweroff,offset: offset in the register map for the poweroff register
+- poweroff,mask: the mask written to the poweroff register
+- poweroff,value the value written to the poweroff register
+
+Optional properties:
+- system-power-controller: to indicate pm_power_off is set by this device.
+  See also ../power-controller.txt
+
+Examples:
+
+	parent {
+
+	        poweroff {
+			compatible = "regmap-poweroff";
+			poweroff,offset = <0x04>;
+			poweroff,mask   = <0x80>;
+			poweroff,value   = <0x80>
+			system-power-controller;
+		};
+	};
+

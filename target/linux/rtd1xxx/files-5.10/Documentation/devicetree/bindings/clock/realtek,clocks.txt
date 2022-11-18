@@ -1,0 +1,80 @@
+Realtek Clock/Reset Controller
+==============================
+
+Clock/Reset controllers for Realtek Platform
+
+Platform Controllers
+--------------------
+
+These device tree node should be placed in a syscon.
+
+Required properties :
+
+- compatible :
+	should contain only one of the following:
+
+		"realtek,rtd1195-crt-clk" for RTD1195 CRT clock controller,
+		"realtek,rtd1195-iso-clk" for RTD1195 ISO clock controller,
+		"realtek,rtd1295-crt-clk" for RTD1295 CRT clock controller,
+		"realtek,rtd1295-iso-clk" for RTD1295 ISO clock controller,
+		"realtek,rtd1395-crt-clk" for RTD1395 CRT clock controller,
+		"realtek,rtd1395-iso-clk" for RTD1395 ISO clock controller,
+		"realtek,rtd1619-crt-clk" for RTD1619 CRT clock controller,
+		"realtek,rtd1611-crt-clk" for RTD1611 CRT clock controller,
+		"realtek,rtd1619-iso-clk" for RTD1619 ISO clock controller,
+		"realtek,rtd1319-crt-clk" for RTD1319 CRT clock controller,
+		"realtek,rtd1319-crt-clk-n" for RTD1319 CRT clock controller of non-protected clocks,
+		"realtek,rtd1311-crt-clk" for RTD1311 CRT clock controller,
+		"realtek,rtd1319-iso-clk" for RTD1319 ISO clock controller,
+		"realtek,rtd1619b-crt-clk" for RTD1319 CRT clock controller,
+		"realtek,rtd1619b-crt-clk-n" for RTD1319 CRT clock controller of non-protected clocks,
+		"realtek,rtd1619b-iso-clk" for RTD1319 ISO clock controller,
+		"realtek,rtd1312c-crt-clk" for RTD1312C CRT clock controller,
+		"realtek,rtd1312c-crt-clk-n" for RTD1312C CRT clock controller of non-protected clocks,
+		"realtek,rtd1319d-crt-clk" for RTD1319D CRT clock controller,
+		"realtek,rtd1319d-iso-clk" for RTD1319D ISO clock controller.
+
+
+- #clock-cells : should be 1.
+
+- #reset-cells : should be 1.
+
+Example:
+
+	syscon@98000000 {
+		...
+
+		cc: clock-controller {
+			compatible = "realtek,rtd1295-cc";
+			#clock-cells = <1>;
+			#reset-cells = <1>;
+		};
+	};
+
+	consumer {
+		clocks = <&cc CC_CKE_GSPI>;
+	};
+
+
+TEE Clock Controller
+--------------------
+
+Required properties :
+
+- compatible : 
+	should contain only one of the following:
+
+		"realtek,tee-clock-controller" for TEE Clock Controller
+
+
+- #clock-cells : should be 0.
+
+Example:
+
+	tcc: tee-clocks {
+		compatible = "realtek,tee-clock-controller";
+		#clock-cells = <0>;
+	};
+
+
+See "clock-bindings.txt"

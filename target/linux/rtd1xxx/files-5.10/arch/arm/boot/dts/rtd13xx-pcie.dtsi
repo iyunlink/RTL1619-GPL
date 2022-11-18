@@ -1,0 +1,256 @@
+// SPDX-License-Identifier: GPL-2.0+
+/*
+ * Realtek RTD13xx SoC family
+ *
+ * Copyright (c) 2019-2020 Realtek Semiconductor Corp.
+ */
+
+/ {
+	pcie: pcie@98060000 {
+		compatible = "realtek,rtk13xx-pcie-slot1";
+		reg = <0x98060000 0x00001000
+		       0x98061000 0x00001000
+		       0x9801C800 0x00000100
+		       0x9800705C 0x00000010>;
+		interrupt-names = "rtk-pcie1-intr";
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &gic GIC_SPI 61 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 61 4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pcie_clk_pins_0>;
+		bus-range = <0x00 0xff>;
+		linux,pci-domain = <0>;
+		device_type = "pci";
+		gpios = <&gpio 19 GPIO_ACTIVE_HIGH>;
+		#size-cells = <2>;
+		#address-cells = <3>;
+		num-lanes = <1>;
+		pci_phys = <0x000C0601>, //CMU_CP_ISEL = 0x08
+		           <0xD2F50401>, //CMU_LDO_VREF = [10]
+		           <0x000C0601>, //CMU_CP_ISEL=0xC
+		           <0xC2100a01>, //CMU_SR = 0x4 ; EQ_SELREG = [0] ; CMU_SC = [0] ; EQHOLD=[0]
+		           <0xff002901>, //RX_RESERVED[2] = 0x0
+		           <0xa8520101>, //CDR_KP = [010010];CDR_KI = [001]
+		           <0xB9050b01>, //OOBS_DM = [11]
+		           <0x620c0901>, //OOBS_SEL = [0]、OOBS_CALI = [10]
+		           <0x4f082401>, //FILTER_OUT = [0001000]
+		           <0xf7120d01>, //RX_Z0_RX = [0100]
+		           <0xCB662301>, //TX_TERM = [1011]
+		           <0xc4662001>, //TX amplitude
+		           <0x55772101>, //TXDRV_DAC_POST0 = 0x3、TXDRV_DAC_POST1 = 0x7
+		           <0x00332201>, //TX_DEEMP_EN = 0x0
+		           <0x61BD2f01>, //TXDRV_DAC_POST0_6DB = 0x6
+		           <0x10000E01>, //TXDRV_DAC_POST0_6DB = 0x6
+		           <0xB8012B01>, //TXDRV_DAC_POST0_6DB = 0x6
+		           <0x8EA11B01>, //Bit[11:9]=[111](Speed Change 不Toggle TX/PLL/CMU)
+		           <0x600c0901>, //OOBS_FORCECAL = [0]
+		           <0x620c0901>, //OOBS_FORCECAL = [1]
+		           <0x000C4601>, //CMU_CP_ISEL = 0xf
+		           <0xD2F54401>, //CMU_LDO_VREF = [10]
+		           <0xC2104a01>, //CMU_SR = 0x4 ; EQ_SELREG = [0] ; CMU_SC = [0] ; EQHOLD=[0]
+		           <0xff006901>, //RX_RESERVED[2] = 0x0
+		           <0xa84a4101>, //CDR_KP = [001010]
+		           <0xB9054b01>, //OOBS_DM = [11]
+		           <0x620c4901>, //OOBS_SEL = [0]、OOBS_CALI = [10]
+		           <0x4f0c6401>, //FILTER_OUT = [0001100]
+		           <0xf7124d01>, //RX_Z0_RX = [0100]
+		           <0xCB666301>, //TX_TERM = [1011]
+		           <0xc4666001>, //TXDRV_DAC_DAT = 0x7
+		           <0x88666101>, //TXDRV_DAC_POST0 = 0x8、TXDRV_DAC_POST1 = 0x7
+		           <0x00336201>, //TX_DEEMP_EN = 0x0
+		           <0x91BD6F01>, //TX_DEEMP_EN = 0x0
+		           <0x10004E01>, //TX_DEEMP_EN = 0x0
+		           <0xB8016B01>, //TX_DEEMP_EN = 0x0
+		           <0x600c4901>, //OOBS_FORCECAL = [0]
+		           <0x620c4901>; //OOBS_FORCECAL = [1]
+
+		speed-mode = <1>; // 0:GEN1, 1:GEN2
+		debug-mode = <0>;
+		ranges = <0x02000000 0x0 0x98062000 0x98062000 0x0 0x0001E000
+			  0x01000000 0x0 0x00030000 0x00030000 0x0 0x00010000>;
+		resets = <&cc RTD1319_CRT_RSTN_PCIE0>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_CORE>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_POWER>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_NONSTITCH>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_STITCH>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_PHY>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_PHY_MDIO>,
+			<&cc RTD1319_CRT_RSTN_PCIE0_SGMII_MDIO>;
+
+		reset-names = "rstn",
+			"core",
+			"power",
+			"nonstitch",
+			"stitch",
+			"phy",
+			"phy_mdio",
+			"sgmii_mdio";
+		clocks = <&cc RTD1319_CRT_CLK_EN_PCIE0>;
+		status = "disabled";
+	};
+
+	pcie2: pcie@980A0000 {
+		compatible = "realtek,rtk13xx-pcie-slot2";
+		reg = <0x980A0000 0x00001000
+		       0x980A1000 0x00001000
+		       0x9801C600 0x00000100
+		       0x9804F000 0x00000100>;
+		interrupt-names = "rtk-pcie2-intr";
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &gic GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 62 4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pcie_clk_pins_1>;
+		bus-range = <0x00 0xff>;
+		linux,pci-domain = <1>;
+		device_type = "pci";
+		gpios = <&gpio 80 GPIO_ACTIVE_HIGH>;
+		#size-cells = <2>;
+		#address-cells = <3>;
+		num-lanes = <1>;
+		pci_phys = <0x000C0601>, //CMU_CP_ISEL = 0x08
+		           <0xD2F50401>, //CMU_LDO_VREF = [10]
+		           <0x000C0601>, //CMU_CP_ISEL=0xC
+		           <0xC2100a01>, //CMU_SR = 0x4 ; EQ_SELREG = [0] ; CMU_SC = [0] ; EQHOLD=[0]
+		           <0xff002901>, //RX_RESERVED[2] = 0x0
+		           <0xa8520101>, //CDR_KP = [010010];CDR_KI = [001]
+		           <0xB9050b01>, //OOBS_DM = [11]
+		           <0x620c0901>, //OOBS_SEL = [0]、OOBS_CALI = [10]
+		           <0x4f082401>, //FILTER_OUT = [0001000]
+		           <0xf7120d01>, //RX_Z0_RX = [0100]
+		           <0xCB662301>, //TX_TERM = [1011]
+		           <0xc4662001>, //TX amplitude
+		           <0x55772101>, //TXDRV_DAC_POST0 = 0x3、TXDRV_DAC_POST1 = 0x7
+		           <0x00332201>, //TX_DEEMP_EN = 0x0
+		           <0x61BD2f01>, //TXDRV_DAC_POST0_6DB = 0x6
+		           <0x10000E01>, //TXDRV_DAC_POST0_6DB = 0x6
+		           <0xB8012B01>, //TXDRV_DAC_POST0_6DB = 0x6
+		           <0x8EA11B01>, //Bit[11:9]=[111](Speed Change 不Toggle TX/PLL/CMU)
+		           <0x600c0901>, //OOBS_FORCECAL = [0]
+		           <0x620c0901>, //OOBS_FORCECAL = [1]
+		           <0x000C4601>, //CMU_CP_ISEL = 0xf
+		           <0xD2F54401>, //CMU_LDO_VREF = [10]
+		           <0xC2104a01>, //CMU_SR = 0x4 ; EQ_SELREG = [0] ; CMU_SC = [0] ; EQHOLD=[0]
+		           <0xff006901>, //RX_RESERVED[2] = 0x0
+		           <0xa84a4101>, //CDR_KP = [001010]
+		           <0xB9054b01>, //OOBS_DM = [11]
+		           <0x620c4901>, //OOBS_SEL = [0]、OOBS_CALI = [10]
+		           <0x4f0c6401>, //FILTER_OUT = [0001100]
+		           <0xf7124d01>, //RX_Z0_RX = [0100]
+		           <0xCB666301>, //TX_TERM = [1011]
+		           <0xc4666001>, //TXDRV_DAC_DAT = 0x7
+		           <0x88666101>, //TXDRV_DAC_POST0 = 0x8、TXDRV_DAC_POST1 = 0x7
+		           <0x00336201>, //TX_DEEMP_EN = 0x0
+		           <0x91BD6F01>, //TX_DEEMP_EN = 0x0
+		           <0x10004E01>, //TX_DEEMP_EN = 0x0
+		           <0xB8016B01>, //TX_DEEMP_EN = 0x0
+		           <0x600c4901>, //OOBS_FORCECAL = [0]
+		           <0x620c4901>; //OOBS_FORCECAL = [1]
+
+		speed-mode = <1>; // 0:GEN1, 1:GEN2
+		debug-mode = <0>;
+		ranges = <0x03000000 0x0 0x980A2000 0x980A2000 0x0 0x0001E000 
+			  0x01000000 0x0 0x00040000 0x00040000 0x0 0x00010000>;
+		resets = <&cc RTD1319_CRT_RSTN_PCIE1>,
+			<&cc RTD1319_CRT_RSTN_PCIE1_CORE>,
+			<&cc RTD1319_CRT_RSTN_PCIE1_POWER>,
+			<&cc RTD1319_CRT_RSTN_PCIE1_NONSTITCH>,
+			<&cc RTD1319_CRT_RSTN_PCIE1_STITCH>,
+			<&cc RTD1319_CRT_RSTN_PCIE1_PHY>,
+			<&cc RTD1319_CRT_RSTN_PCIE1_PHY_MDIO>;
+
+		reset-names = "rstn",
+			"core",
+			"power",
+			"nonstitch",
+			"stitch",
+			"phy",
+			"phy_mdio";
+		clocks = <&cc RTD1319_CRT_CLK_EN_PCIE1>;
+		status = "okay";
+	};
+
+	pcie3: pcie@980C0000 {
+		compatible = "realtek,rtk13xx-pcie-slot3";
+		reg = <0x980C0000 0x00001000
+		       0x980C1000 0x00001000
+		       0x9801C600 0x00000100
+		       0x9804F000 0x00000100>;
+		interrupt-names = "rtk-pcie3-intr";
+		#interrupt-cells = <1>;
+		interrupt-map-mask = <0 0 0 0>;
+		interrupt-map = <0 0 0 0 &gic GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH>;
+		interrupts = <0 62 4>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pcie_clk_pins_2>;
+		bus-range = <0x00 0xff>;
+		linux,pci-domain = <2>;
+		device_type = "pci";
+		gpios = <&gpio 81 GPIO_ACTIVE_HIGH>;
+		#size-cells = <2>;
+		#address-cells = <3>;
+		num-lanes = <1>;
+		pci_phys = <0x000C0601>, //CMU_CP_ISEL = 0x08
+		           <0xD2F50401>, //CMU_LDO_VREF = [10]
+		           <0x000C0601>, //CMU_CP_ISEL=0xC
+		           <0xC2100a01>, //CMU_SR = 0x4 ; EQ_SELREG = [0] ; CMU_SC = [0] ; EQHOLD=[0]
+		           <0xff002901>, //RX_RESERVED[2] = 0x0
+		           <0xa8520101>, //CDR_KP = [010010];CDR_KI = [001]
+		           <0xB9050b01>, //OOBS_DM = [11]
+		           <0x620c0901>, //OOBS_SEL = [0]、OOBS_CALI = [10]
+		           <0x4f082401>, //FILTER_OUT = [0001000]
+		           <0xf7120d01>, //RX_Z0_RX = [0100]
+		           <0xCB662301>, //TX_TERM = [1011]
+		           <0xc4662001>, //TX amplitude
+		           <0x55772101>, //TXDRV_DAC_POST0 = 0x3、TXDRV_DAC_POST1 = 0x7
+		           <0x00332201>, //TX_DEEMP_EN = 0x0
+		           <0x61BD2f01>, //TXDRV_DAC_POST0_6DB = 0x6
+		           <0x10000E01>, //TXDRV_DAC_POST0_6DB = 0x6
+		           <0xB8012B01>, //TXDRV_DAC_POST0_6DB = 0x6
+		           <0x8EA11B01>, //Bit[11:9]=[111](Speed Change 不Toggle TX/PLL/CMU)
+		           <0x600c0901>, //OOBS_FORCECAL = [0]
+		           <0x620c0901>, //OOBS_FORCECAL = [1]
+		           <0x000C4601>, //CMU_CP_ISEL = 0xf
+		           <0xD2F54401>, //CMU_LDO_VREF = [10]
+		           <0xC2104a01>, //CMU_SR = 0x4 ; EQ_SELREG = [0] ; CMU_SC = [0] ; EQHOLD=[0]
+		           <0xff006901>, //RX_RESERVED[2] = 0x0
+		           <0xa84a4101>, //CDR_KP = [001010]
+		           <0xB9054b01>, //OOBS_DM = [11]
+		           <0x620c4901>, //OOBS_SEL = [0]、OOBS_CALI = [10]
+		           <0x4f0c6401>, //FILTER_OUT = [0001100]
+		           <0xf7124d01>, //RX_Z0_RX = [0100]
+		           <0xCB666301>, //TX_TERM = [1011]
+		           <0xc4666001>, //TXDRV_DAC_DAT = 0x7
+		           <0x88666101>, //TXDRV_DAC_POST0 = 0x8、TXDRV_DAC_POST1 = 0x7
+		           <0x00336201>, //TX_DEEMP_EN = 0x0
+		           <0x91BD6F01>, //TX_DEEMP_EN = 0x0
+		           <0x10004E01>, //TX_DEEMP_EN = 0x0
+		           <0xB8016B01>, //TX_DEEMP_EN = 0x0
+		           <0x600c4901>, //OOBS_FORCECAL = [0]
+		           <0x620c4901>; //OOBS_FORCECAL = [1]
+
+		speed-mode = <1>; // 0:GEN1, 1:GEN2
+		debug-mode = <0>;
+		ranges = <0x02000000 0x0 0x980C2000 0x980C2000 0x0 0x0001E000
+			  0x01000000 0x0 0x00050000 0x00050000 0x0 0x00010000>;
+		resets = <&cc RTD1319_CRT_RSTN_PCIE2>,
+			<&cc RTD1319_CRT_RSTN_PCIE2_CORE>,
+			<&cc RTD1319_CRT_RSTN_PCIE2_POWER>,
+			<&cc RTD1319_CRT_RSTN_PCIE2_NONSTITCH>,
+			<&cc RTD1319_CRT_RSTN_PCIE2_STITCH>,
+			<&cc RTD1319_CRT_RSTN_PCIE2_PHY>,
+			<&cc RTD1319_CRT_RSTN_PCIE2_PHY_MDIO>;
+
+		reset-names = "rstn",
+			"core",
+			"power",
+			"nonstitch",
+			"stitch",
+			"phy",
+			"phy_mdio";
+		clocks = <&cc RTD1319_CRT_CLK_EN_PCIE2>;
+		status = "okay";
+	};
+};

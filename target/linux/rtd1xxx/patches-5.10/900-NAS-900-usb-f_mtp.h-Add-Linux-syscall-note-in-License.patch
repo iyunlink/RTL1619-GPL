@@ -1,0 +1,22 @@
+From 1c20d92db959c421017e808230083572df5ce435 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 15:31:29 +0800
+Subject: usb/f_mtp.h: Add Linux-syscall-note in License
+
+---
+ include/uapi/linux/usb/f_mtp.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/include/uapi/linux/usb/f_mtp.h b/include/uapi/linux/usb/f_mtp.h
+index c52732fc6..0adde332f 100644
+--- a/include/uapi/linux/usb/f_mtp.h
++++ b/include/uapi/linux/usb/f_mtp.h
+@@ -1,4 +1,4 @@
+-/* SPDX-License-Identifier: GPL-2.0+ */
++/* SPDX-License-Identifier: GPL-2.0+ WITH Linux-syscall-note */
+ /*
+  * Gadget Function Driver for MTP
+  *
+-- 
+2.17.1
+

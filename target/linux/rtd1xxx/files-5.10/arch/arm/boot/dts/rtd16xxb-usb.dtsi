@@ -1,0 +1,383 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Realtek RTD16xxb SoC USB
+ *
+ * Copyright (c) 2021 Realtek Semiconductor Corp.
+ */
+
+&usb_manager {
+	//usb_iso_mode;  /* ISO mode is only port suspend (Default disable) */
+	//en_usb_storage_reprobe; /* To enable usb storage re-probe*/
+	//rescue_usb; /* For rescue dtb use */
+
+	status = "disabled";
+
+	gpio0: gpio0 {
+		//realtek,power-gpio = <&gpio 48 1 3>;
+		power_low_active;
+	};
+
+	gpio1: gpio1 {
+		//realtek,power-gpio = <&gpio 49 1 3>;
+		power_low_active;
+	};
+
+	port0 {
+		usb = <&usb_port0>;
+		usb_gpio = <&gpio0>;
+	};
+
+	port1 {
+		usb = <&usb_port1>;
+		usb_gpio = <&gpio0>;
+	};
+
+	port2 {
+		usb = <&usb_port2>;
+		usb_gpio = <&gpio1>;
+	};
+
+	rtk_usb {
+		//pcie_usb3phy_sel = <0x9800705c>; /* Only for RTD1319 */
+
+		TP1CK_MEM_TEST1_register = <0x9804ef14>;
+
+		power_ctrl_reg {
+			/* l4_icg */
+			p0_l4_icg = <0x98013364>;
+			p1_l4_icg = <0x98013d60>;
+			p2_l4_icg = <0x98013f60>;
+
+			usb_power_cut; /* Non ISO mode and power cut (Default disable power cut) */
+					/* Note if enable ISO mode, then power_cut will not effective*/
+		};
+
+		type_c {
+			/* For 1315C, u3drd */
+			//realtek,connector_switch-gpio = <&gpio 49 1 3>;
+			/* For 1619B, u3drd */
+			//realtek,plug_side_switch-gpio = <&gpio 53 1 3>;
+		};
+	};
+};
+
+&usb_manager {
+	clocks = <&ic RTD1619B_ISO_CLK_EN_USB>, /* clk_en_usb */
+			<&ic RTD1619B_ISO_CLK_EN_USB_DRD>,  /* clk_en_usb_drd (port0 phy to u2drd clock) */
+			<&ic RTD1619B_ISO_CLK_EN_USB_HOST>,  /* clk_en_usb_host0 (port1 phy to u2host clock) */
+			<&ic RTD1619B_ISO_CLK_EN_USB_U3_HOST>;  /* clk_en_usb_host1 (port2 phy to u3drd clock) */
+	clock-names = "clk_en_usb", /*clk_en_usb*/
+			"clk_en_phy0_to_host", /* clk_en_usb_drd (port0 phy to u2drd clock) */
+			"clk_en_phy1_to_host", /* clk_en_usb_u2host (port1 phy to u2host clock) */
+			"clk_en_phy2_to_host"; /* clk_en_usb_u3host (port2 phy to u3drd clock) */
+
+	resets = <&ic RTD1619B_ISO_RSTN_USB_DRD>, /* rstn_usb_u2drd (port0) */
+			<&ic RTD1619B_ISO_RSTN_USB_HOST>, /* rstn_usb_u2host(port1) */
+			<&ic RTD1619B_ISO_RSTN_USB_PHY_0>, /* rstn_usb_phy0 (port0 u2phy) */
+			<&ic RTD1619B_ISO_RSTN_USB_PHY_1>, /* rstn_usb_phy1 (port1 u2phy) */
+			<&ic RTD1619B_ISO_RSTN_USB_PHY_2>, /* rstn_usb_phy2 (port2 u2phy) */
+			<&ic RTD1619B_ISO_RSTN_USB>, /* rstn_usb */
+			<&ic RTD1619B_ISO_RSTN_TYPE_C>, /* rstn_type_c */
+			<&ic RTD1619B_ISO_RSTN_USB_U3_HOST>, /* rstn_usb_u3drd (port2) */
+			<&ic RTD1619B_ISO_RSTN_USB3_PHY0_POW>, /* rstn_usb3_phy0 (port0 u3phy) no used */
+			<&ic RTD1619B_ISO_RSTN_USB3_P0_MDIO>, /* rstn_usb3_phy0_mdio (port0 u3phy) no used */
+			<&ic RTD1619B_ISO_RSTN_USB3_PHY1_POW>, /* rstn_usb3_phy1 (port2 u3phy) */
+			<&ic RTD1619B_ISO_RSTN_USB3_P1_MDIO>; /* rstn_usb3_phy1_mdio (port2 u3phy) */
+
+	reset-names = "usb_host0", /* rstn_usb_u2drd (port0) */
+			"usb_host1", /* rstn_usb_u2host (port1) */
+			"u2phy0", /* rstn_usb_phy0 (port0 u2phy) */
+			"u2phy1", /* rstn_usb_phy1 (port1 u2phy) */
+			"u2phy2", /* rstn_usb_phy2 (port2 u2phy) */
+			"usb", /* rstn_usb */
+			"type_c", /* rstn_type_c */
+			"usb_host2", /* rstn_usb_u3drd (port2) */
+			"u3phy0", /* rstn_usb3_phy0 (port0 u3phy) no used*/
+			"u3mdio0", /* rstn_usb3_phy0_mdio (port0 u3phy) no used */
+			"u3phy2", /* rstn_usb3_phy1 (port2 u3phy) */
+			"u3mdio2"; /* rstn_usb3_phy1_mdio (port2 u3phy) */
+};
+
+&usb_manager {
+	usb_port0_usb2phy: usb_port0_usb2phy@13214 {
+		compatible = "realtek,usb2phy";
+		reg = <0x13214 0x4>, <0x28280 0x4>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+	};
+
+	usb_port0: usb_port0@13200 {
+		compatible = "realtek,dwc3";
+		reg = <0x13200 0x200>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+	};
+
+	usb_port1_usb2phy: usb_port1_usb2phy@13c14 {
+		compatible = "realtek,usb2phy";
+		reg = <0x13c14 0x4>, <0x31280 0x4>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+	};
+
+	usb_port1: usb_port1@13c00 {
+		compatible = "realtek,dwc3";
+		reg = <0x13c00 0x200>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+	};
+
+	usb_port2_usb2phy: usb_port2_usb2phy@13e14 {
+		compatible = "realtek,usb2phy";
+		reg = <0x13e14 0x4>, <0x58280 0x4>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+	};
+
+	usb_port2_usb3phy: usb_port2_usb3phy@13e10 {
+		compatible = "realtek,usb3phy";
+		reg = <0x13e10 0x4>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+	};
+
+	usb_port2: usb_port2@13e00 {
+		compatible = "realtek,dwc3";
+		reg = <0x13e00 0x200>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+	};
+
+	type_c: type_c@7220 {
+		compatible = "realtek,dwc3-type_c";
+		reg = <0x7220 0x20>;
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+	};
+};
+
+&usb_port0 {
+	delay_probe_work; //To delay probe work
+	ordered_probe; // ordered probe in delay work
+	drd_mode;
+	status = "disabled";
+
+	dwc3_u2drd@20000 {
+		compatible = "synopsys,dwc3";
+		reg = <0x20000 0x9000>;
+		interrupts = <0 95 4>;
+		snps,fixed_dwc3_globals_regs_start = <0x8100>;
+		usb-phy = <&usb_port0_usb2phy>;
+		dr_mode = "host"; /*host, peripheral*/
+		snps,dis_u2_susphy_quirk; // Disable u2phy suspend for drd
+		snps,dis-u2-freeclk-exists-quirk; // Fixed u2drd host die issue
+		snps,parkmode-disable-hs-quirk; // disable usb2.0 park mode
+
+		status = "okay";
+	};
+};
+
+&usb_port1 {
+	delay_probe_work; //To delay probe work
+	ordered_probe; // ordered probe in delay work
+	status = "disabled";
+
+	dwc3_u2host@29000 {
+		compatible = "synopsys,dwc3";
+		reg = <0x29000 0x9000>;
+		interrupts = <0 21 4>;
+		snps,fixed_dwc3_globals_regs_start = <0x8100>;
+		usb-phy = <&usb_port1_usb2phy>;
+		dr_mode = "host"; /*only host*/
+		snps,parkmode-disable-hs-quirk; // disable usb2.0 park mode
+
+		status = "okay";
+	};
+};
+
+&usb_port2 {
+	delay_probe_work; //To delay probe work
+	ordered_probe; // ordered probe in delay work
+	drd_mode;
+	status = "disabled";
+
+	dwc3_u3drd@50000 {
+		compatible = "synopsys,dwc3";
+		reg = <0x50000 0x9000>;
+		interrupts = <0 94 4>;
+		snps,fixed_dwc3_globals_regs_start = <0x8100>;
+		usb-phy = <&usb_port2_usb2phy &usb_port2_usb3phy>;
+		dr_mode = "peripheral"; /*host, peripheral*/
+		snps,dis_u2_susphy_quirk; // Disable u2phy suspend for drd
+		snps,parkmode-disable-ss-quirk; // disable usb3.0 park mode
+		snps,parkmode-disable-hs-quirk; // disable usb2.0 park mode
+
+		status = "okay";
+	};
+};
+
+&usb_port0_usb2phy {
+	nvmem-cells = <&otp_usb_port0_dc_cal>, <&otp_usb_port0_dc_dis>;
+	nvmem-cell-names = "usb-dc-cal", "usb-dc-dis";
+	port_index = <0>; /* index in u2 port */
+	phyN = <1>;
+	phy0_data {
+		page0_size = <16>;
+		page0_data_A00 = /* < addr data > */
+			<0xE0 0xA3>, <0xE4 0xB2>, <0xE5 0x4F>, <0xE6 0x42>;
+		//page0_data_B00 =
+		//	<0xE6 0x41>;
+		page1_size = <8>;
+		page1_data_A00 = <0xE3 0x64>;
+		page2_size = <8>;
+		page2_data_A00 = <0xE7 0x45>;
+		do_toggle;
+		do_toggle_driving;
+		disconnect_driving_updated = <0x8>;
+		check_efuse;
+		//use_default_parameter;
+		is_double_sensitivity_mode;
+		ldo_force_enable;
+	};
+};
+
+&usb_port1_usb2phy {
+	nvmem-cells = <&otp_usb_port1_dc_cal>, <&otp_usb_port1_dc_dis>;
+	nvmem-cell-names = "usb-dc-cal", "usb-dc-dis";
+	port_index = <1>; /* index in u2 port */
+	phyN = <1>;
+	phy0_data {
+		page0_size = <16>;
+		page0_data_A00 = /* < addr data > */
+			<0xE4 0xB1>, <0xE6 0x02>;
+		//page0_data_B00 =
+		//	<0xE6 0x41>;
+		page1_size = <8>;
+		//page1_data_A00 = /* use default */
+		//	<0xE0 0x25>, <0xE1 0xEF>, <0xE2 0x60>,
+		//	<0xE3 0x44>, <0xE4 0x00>, <0xE5 0x0F>,
+		//	<0xE6 0x18>, <0xE7 0xE3>;
+		page2_size = <8>;
+		page2_data_A00 = <0xE7 0x45>;
+		do_toggle;
+		do_toggle_driving;
+		disconnect_driving_updated = <0x8>;
+		check_efuse;
+		//use_default_parameter;
+		is_double_sensitivity_mode;
+		ldo_force_enable;
+	};
+};
+
+&usb_port2_usb2phy {
+	nvmem-cells = <&otp_usb_port2_dc_cal>, <&otp_usb_port2_dc_dis>;
+	nvmem-cell-names = "usb-dc-cal", "usb-dc-dis";
+	port_index = <2>; /* index in u2 port */
+	phyN = <1>;
+	phy0_data {
+		page0_size = <16>;
+		page0_data_A00 = /* < addr data > */
+			<0xE4 0xB1>, <0xE6 0x02>;
+		//page0_data_B00 =
+		//	<0xE6 0x41>;
+		page1_size = <8>;
+		//page1_data_A00 = /* use default */
+		//	<0xE0 0x25>, <0xE1 0xEF>, <0xE2 0x60>,
+		//	<0xE3 0x44>, <0xE4 0x00>, <0xE5 0x0F>,
+		//	<0xE6 0x18>, <0xE7 0xE3>;
+		page2_size = <8>;
+		page2_data_A00 = <0xE7 0x45>;
+		do_toggle;
+		do_toggle_driving;
+		disconnect_driving_updated = <0x8>;
+		check_efuse;
+		//use_default_parameter;
+		is_double_sensitivity_mode;
+		ldo_force_enable;
+	};
+};
+
+&usb_port2_usb3phy {
+	nvmem-cells = <&otp_usb_u3_tx_lfps_swing_trim>;
+	nvmem-cell-names = "usb_u3_tx_lfps_swing_trim";
+	port_index = <0>; /* index in u3 port */
+	phyN = <1>;
+	phy0_data {
+		phy_data_size = <0x30>;
+		phy_data_A00 = /* <addr  data> */
+			<0x01 0xAC8C>,
+			<0x06 0x0017>,
+			<0x09 0x724C>,
+			<0x0B 0xB90D>,
+			<0x0A 0xB610>,
+			<0x0D 0xEF2A>,
+			<0x0F 0x9050>,
+			<0x10 0x000C>,
+			<0x20 0x70FF>,
+			<0x21 0xCFAA>,
+			<0x22 0x0013>,
+			<0x23 0xDB66>,
+			<0x26 0x8609>,
+			<0x29 0xFF13>,
+			<0x2A 0x3070>;
+
+		do_toggle_once;
+		check_efuse;
+		//use_default_parameter;
+	};
+};
+
+&type_c {
+	interrupts = <0 60 4>;
+	//debug; /*to enable debug log*/
+	delay_probe_work; /*To delay probe work*/
+	ordered_probe; /*ordered probe in delay work*/
+
+	dwc3_rtk = <&usb_port2>; /* default dwc3_rtk is u3drd*/
+
+	boot_check_time = <(-1)>; /*ms (At boot Device switch Host time)*/
+	pinctrl-names = "default";
+	pinctrl-0 = <&usb_cc1_pins>, <&usb_cc2_pins>;
+
+	nvmem-cells = <&otp_usb_cal>;
+	nvmem-cell-names = "usb-cal";
+
+	status = "okay";
+
+	default_revision = <0xA00>;
+	A00 {
+		cc_dfp_mode = "dfp_1_5"; /*dfp_3_0, dfp_1_5, dfp_usb*/
+		cc1_rp_4p7k_code = <0xF>;
+		cc1_rp_36k_code = <0xF>;
+		cc1_rp_12k_code = <0xF>;
+		cc1_rd_code = <0xF>;
+		cc1_vref_ufp = /bits/ 8
+			<0x7 0x7 0x7>; /*<1p23v,0p66v,0p2v>*/
+		cc1_vref_dfp_usb = /bits/ 8
+			<0x7 0x7 0x0>; /*<0_1p6v,0p2v,unused>*/
+		cc1_vref_dfp_1_5 = /bits/ 8
+			<0x7 0x7 0x7>; /*<1_1p6v,0p4v,0p2v>*/
+		cc1_vref_dfp_3_0 = /bits/ 8
+			<0x7 0x7 0x7>; /*<2p6v,0p8v,0p2v>*/
+		cc2_rp_4p7k_code = <0xF>;
+		cc2_rp_36k_code = <0xF>;
+		cc2_rp_12k_code = <0xF>;
+		cc2_rd_code = <0xF>;
+		cc2_vref_ufp = /bits/ 8
+			<0x7 0x7 0x7>; /*<1p23v,0p66v,0p2v>*/
+		cc2_vref_dfp_usb = /bits/ 8
+			<0x7 0x7 0x0>; /*<0_1p6v,0p2v,unused>*/
+		cc2_vref_dfp_1_5 = /bits/ 8
+			<0x7 0x7 0x7>; /*<1_1p6v,0p4v,0p2v>*/
+		cc2_vref_dfp_3_0 = /bits/ 8
+			<0x7 0x7 0x7>; /*<2p6v,0p8v,0p2v>*/
+	};
+};

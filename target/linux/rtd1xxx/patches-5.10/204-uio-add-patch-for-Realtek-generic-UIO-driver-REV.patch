@@ -1,0 +1,28 @@
+From 636637b251f856dbdfba69f3c248f612f05d72e6 Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Thu, 13 Aug 2020 10:22:56 +0800
+Subject: [PATCH 06/54] 204: uio: add patch for Realtek generic UIO driver
+ [REVIEWER] Cheng-Yu Lee
+
+include/linux/uio_driver.h
+---
+ include/linux/uio_driver.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/include/linux/uio_driver.h b/include/linux/uio_driver.h
+index 54bf6b118..0a5a97f7e 100644
+--- a/include/linux/uio_driver.h
++++ b/include/linux/uio_driver.h
+@@ -104,6 +104,9 @@ struct uio_info {
+ 	long			irq;
+ 	unsigned long		irq_flags;
+ 	void			*priv;
++#ifdef CONFIG_UIO_ASSIGN_MINOR
++	int     minor;
++#endif
+ 	irqreturn_t (*handler)(int irq, struct uio_info *dev_info);
+ 	int (*mmap)(struct uio_info *info, struct vm_area_struct *vma);
+ 	int (*open)(struct uio_info *info, struct inode *inode);
+-- 
+2.17.1
+

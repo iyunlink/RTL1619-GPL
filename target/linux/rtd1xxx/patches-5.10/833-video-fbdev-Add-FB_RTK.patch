@@ -1,0 +1,45 @@
+From 7bbe916073c16b32cd96d785dd9d9a3dbfb9d037 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:46:45 +0800
+Subject: [PATCH 52/54] 833: video: fbdev: Add FB_RTK
+
+---
+ drivers/video/fbdev/Kconfig  | 9 +++++++++
+ drivers/video/fbdev/Makefile | 1 +
+ 2 files changed, 10 insertions(+)
+
+diff --git a/drivers/video/fbdev/Kconfig b/drivers/video/fbdev/Kconfig
+index 4f02db65d..d5925baed 100644
+--- a/drivers/video/fbdev/Kconfig
++++ b/drivers/video/fbdev/Kconfig
+@@ -2042,6 +2042,15 @@ config FB_DA8XX
+ 	  found on DA8xx/OMAP-L1xx/AM335x SoCs.
+ 	  If unsure, say N.
+ 
++config FB_RTK
++	tristate "RTK Framebuffer support"
++	default n
++	select SYNC
++	select SW_SYNC
++	select SW_SYNC_USER
++	help
++	  Realtek Frame Buffer driver
++
+ config FB_VIRTUAL
+ 	tristate "Virtual Frame Buffer support (ONLY FOR TESTING!)"
+ 	depends on FB
+diff --git a/drivers/video/fbdev/Makefile b/drivers/video/fbdev/Makefile
+index 477b9624b..2f1507009 100644
+--- a/drivers/video/fbdev/Makefile
++++ b/drivers/video/fbdev/Makefile
+@@ -129,6 +129,7 @@ obj-$(CONFIG_FB_MX3)		  += mx3fb.o
+ obj-$(CONFIG_FB_DA8XX)		  += da8xx-fb.o
+ obj-$(CONFIG_FB_SSD1307)	  += ssd1307fb.o
+ obj-$(CONFIG_FB_SIMPLE)           += simplefb.o
++obj-$(CONFIG_FB_RTK)              += rtk/
+ 
+ # the test framebuffer is last
+ obj-$(CONFIG_FB_VIRTUAL)          += vfb.o
+-- 
+2.17.1
+

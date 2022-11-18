@@ -1,0 +1,41 @@
+From 40ba22fe8e60fce43410870c7f4f517713c5fd98 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 13:53:19 +0800
+Subject: [PATCH 20/54] 801: hwrng: Add Realtek RTD1319 RNG hardware driver
+
+---
+ drivers/char/hw_random/Kconfig  | 7 +++++++
+ drivers/char/hw_random/Makefile | 2 ++
+ 2 files changed, 9 insertions(+)
+
+diff --git a/drivers/char/hw_random/Kconfig b/drivers/char/hw_random/Kconfig
+index 595221052..dbd712a42 100644
+--- a/drivers/char/hw_random/Kconfig
++++ b/drivers/char/hw_random/Kconfig
+@@ -536,6 +536,13 @@ config HW_RANDOM_XIPHERA
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called xiphera-trng.
+ 
++config HW_RANDOM_REALTEK_RTD1319
++	tristate "Realtek RTD1319 Random Number Generator support"
++	depends on ARCH_REALTEK
++	default y
++	help
++	  Say Y, if you want to enable random number generator on Realtek platform.
++
+ endif # HW_RANDOM
+ 
+ config UML_RANDOM
+diff --git a/drivers/char/hw_random/Makefile b/drivers/char/hw_random/Makefile
+index 5da344509..bfecf09fc 100644
+--- a/drivers/char/hw_random/Makefile
++++ b/drivers/char/hw_random/Makefile
+@@ -46,3 +46,5 @@ obj-$(CONFIG_HW_RANDOM_OPTEE) += optee-rng.o
+ obj-$(CONFIG_HW_RANDOM_NPCM) += npcm-rng.o
+ obj-$(CONFIG_HW_RANDOM_CCTRNG) += cctrng.o
+ obj-$(CONFIG_HW_RANDOM_XIPHERA) += xiphera-trng.o
++obj-$(CONFIG_HW_RANDOM_REALTEK_RTD1319) += rtd-rng.o
++
+-- 
+2.17.1
+

@@ -1,0 +1,9 @@
+SFE_KO=shortcut_fe_cm
+
+if [ "`uci -q get firewall.sfe.config`" = "1" ]; then
+	[ -d "/sys/module/$SFE_KO" ] || modprobe $SFE_KO
+else
+	[ -d "/sys/module/$SFE_KO" ] && rmmod $SFE_KO
+fi
+
+exit 0

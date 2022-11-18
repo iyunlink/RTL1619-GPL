@@ -1,0 +1,291 @@
+From 0ab979141a62607c352691cd20c7ef2333577378 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 15:11:20 +0800
+Subject: [PATCH 54/54] 835: sound: Add RTD sound driver
+
+---
+ include/sound/memalloc.h              |  6 ++++++
+ include/uapi/sound/asound.h           | 23 +++++++++++++++++++++++
+ include/uapi/sound/compress_offload.h | 10 ++++++++++
+ include/uapi/sound/compress_params.h  | 10 ++++++++++
+ sound/core/Makefile                   |  5 +++++
+ sound/core/compress_offload.c         | 20 +++++++++++++++++++-
+ sound/core/memalloc.c                 |  3 ++-
+ sound/core/pcm_compat.c               |  8 ++++++++
+ sound/core/pcm_lib.c                  |  3 ++-
+ sound/core/pcm_native.c               | 16 ++++++++++++++++
+ sound/soc/Kconfig                     |  1 +
+ sound/soc/Makefile                    |  1 +
+ 12 files changed, 103 insertions(+), 3 deletions(-)
+
+diff --git a/include/sound/memalloc.h b/include/sound/memalloc.h
+index 5daa93768..bdb55ec6c 100644
+--- a/include/sound/memalloc.h
++++ b/include/sound/memalloc.h
+@@ -38,6 +38,9 @@ struct snd_dma_device {
+ #define SNDRV_DMA_TYPE_DEV_SG	SNDRV_DMA_TYPE_DEV /* no SG-buf support */
+ #define SNDRV_DMA_TYPE_DEV_UC_SG	SNDRV_DMA_TYPE_DEV_UC
+ #endif
++#ifdef CONFIG_ARCH_REALTEK
++#define SNDRV_DMA_TYPE_ION		8
++#endif /* CONFIG_ARCH_REALTEK */
+ #ifdef CONFIG_GENERIC_ALLOCATOR
+ #define SNDRV_DMA_TYPE_DEV_IRAM		4	/* generic device iram-buffer */
+ #else
+@@ -54,6 +57,9 @@ struct snd_dma_buffer {
+ 	dma_addr_t addr;	/* physical address */
+ 	size_t bytes;		/* buffer size in bytes */
+ 	void *private_data;	/* private for allocator; don't touch */
++#ifdef CONFIG_ARCH_REALTEK
++	struct dma_buf *rtk_ion_rpc_dmabuf;
++#endif
+ };
+ 
+ /*
+diff --git a/include/uapi/sound/asound.h b/include/uapi/sound/asound.h
+index 535a7229e..a5c586ef2 100644
+--- a/include/uapi/sound/asound.h
++++ b/include/uapi/sound/asound.h
+@@ -537,6 +537,19 @@ struct __snd_pcm_mmap_control {
+ 	snd_pcm_uframes_t avail_min;	/* RW: min available frames for wakeup */
+ };
+ 
++#ifdef CONFIG_ARCH_REALTEK
++struct AUDIO_RPC_EQUALIZER_MODE {
++	int mode;
++	int gain[10];
++};
++
++struct AUDIO_RPC_OUT_PARAMETER {
++	int disable_adfs;
++	int lpcm_out_delay;
++	int hw_buffer_delay;
++};
++#endif /* CONFIG_ARCH_REALTEK */
++
+ #define SNDRV_PCM_SYNC_PTR_HWSYNC	(1<<0)	/* execute hwsync */
+ #define SNDRV_PCM_SYNC_PTR_APPL		(1<<1)	/* get appl_ptr from driver (r/w op) */
+ #define SNDRV_PCM_SYNC_PTR_AVAIL_MIN	(1<<2)	/* get avail_min from driver */
+@@ -700,6 +713,16 @@ enum {
+ #define SNDRV_PCM_IOCTL_LINK		_IOW('A', 0x60, int)
+ #define SNDRV_PCM_IOCTL_UNLINK		_IO('A', 0x61)
+ 
++#ifdef CONFIG_ARCH_REALTEK
++#define SNDRV_PCM_IOCTL_VOLUME_SET   _IOW('A', 0xE0, int)
++#define SNDRV_PCM_IOCTL_VOLUME_GET   _IOR('A', 0xE1, int)
++#define SNDRV_PCM_IOCTL_EQ_SET       _IOW('A', 0xE2, struct AUDIO_RPC_EQUALIZER_MODE)
++#define SNDRV_PCM_IOCTL_AO_PARAMETER_SET  _IOW('A', 0xE3, struct AUDIO_RPC_OUT_PARAMETER)
++#define SNDRV_PCM_IOCTL_MMAP_DATA_FD _IOW('A', 0xE4, int)
++#define SNDRV_PCM_IOCTL_GET_LATENCY  _IOR('A', 0xF0, int)
++#define SNDRV_PCM_IOCTL_GET_FW_DELAY _IOR('A', 0xF1, snd_pcm_sframes_t)
++#endif /* CONFIG_ARCH_REALTEK */
++
+ /*****************************************************************************
+  *                                                                           *
+  *                            MIDI v1.0 interface                            *
+diff --git a/include/uapi/sound/compress_offload.h b/include/uapi/sound/compress_offload.h
+index 9555f31c8..90626605b 100644
+--- a/include/uapi/sound/compress_offload.h
++++ b/include/uapi/sound/compress_offload.h
+@@ -179,6 +179,11 @@ struct snd_compr_metadata {
+ #define SNDRV_COMPRESS_START		_IO('C', 0x32)
+ #define SNDRV_COMPRESS_STOP		_IO('C', 0x33)
+ #define SNDRV_COMPRESS_DRAIN		_IO('C', 0x34)
++
++#ifdef CONFIG_ARCH_REALTEK
++#define SNDRV_COMPRESS_GET_LATENCY      _IOR('C', 0xf0, int)
++#endif /* CONFIG_ARCH_REALTEK */
++
+ #define SNDRV_COMPRESS_NEXT_TRACK	_IO('C', 0x35)
+ #define SNDRV_COMPRESS_PARTIAL_DRAIN	_IO('C', 0x36)
+ /*
+@@ -189,4 +194,9 @@ struct snd_compr_metadata {
+ #define SND_COMPR_TRIGGER_DRAIN 7 /*FIXME move this to pcm.h */
+ #define SND_COMPR_TRIGGER_NEXT_TRACK 8
+ #define SND_COMPR_TRIGGER_PARTIAL_DRAIN 9
++
++#ifdef CONFIG_ARCH_REALTEK
++#define SND_COMPR_TRIGGER_GET_LATENCY 0xf
++#endif /* CONFIG_ARCH_REALTEK */
++
+ #endif
+diff --git a/include/uapi/sound/compress_params.h b/include/uapi/sound/compress_params.h
+index 79b14389a..c9d16de62 100644
+--- a/include/uapi/sound/compress_params.h
++++ b/include/uapi/sound/compress_params.h
+@@ -79,6 +79,16 @@
+ #define SND_AUDIOCODEC_APE                   ((__u32) 0x00000010)
+ #define SND_AUDIOCODEC_MAX                   SND_AUDIOCODEC_APE
+ 
++#ifdef CONFIG_ARCH_REALTEK
++/* Rtk begin */
++#define SND_AUDIOCODEC_EAC3                  ((__u32) 0x0000000F)
++#define SND_AUDIOCODEC_DTS                   ((__u32) 0x00000010)
++#define SND_AUDIOCODEC_DTS_HD                ((__u32) 0x00000011)
++#define SND_AUDIOCODEC_TRUEHD                ((__u32) 0x00000012)
++#define SND_AUDIOCODEC_AC3                   ((__u32) 0x00000013)
++/* Rtk end */
++#endif /* CONFIG_ARCH_REALTEK */
++
+ /*
+  * Profile and modes are listed with bit masks. This allows for a
+  * more compact representation of fields that will not evolve
+diff --git a/sound/core/Makefile b/sound/core/Makefile
+index d123587c0..e6e82b2c0 100644
+--- a/sound/core/Makefile
++++ b/sound/core/Makefile
+@@ -4,6 +4,11 @@
+ # Copyright (c) 1999,2001 by Jaroslav Kysela <perex@perex.cz>
+ #
+ 
++ccflags-y += -I$(srctree)/drivers/soc/realtek/common/
++ccflags-y += -I$(srctree)/drivers/soc/realtek/common/mem_allocator/rtk/inc
++
++
++
+ snd-y     := sound.o init.o memory.o control.o misc.o device.o
+ ifneq ($(CONFIG_SND_PROC_FS),)
+ snd-y += info.o
+diff --git a/sound/core/compress_offload.c b/sound/core/compress_offload.c
+index c1fec932c..44caf8a74 100644
+--- a/sound/core/compress_offload.c
++++ b/sound/core/compress_offload.c
+@@ -875,6 +875,20 @@ static int snd_compr_drain(struct snd_compr_stream *stream)
+ 	return snd_compress_wait_for_drain(stream);
+ }
+ 
++#ifdef CONFIG_ARCH_REALTEK
++static int snd_compr_get_latency(struct snd_compr_stream *stream, unsigned long arg)
++{
++	int retval;
++
++	retval = stream->ops->trigger(stream, SND_COMPR_TRIGGER_GET_LATENCY);
++
++	if (retval > 0)
++		retval = copy_to_user((int *)arg, &retval, sizeof(retval)) ? -EFAULT : 0;
++
++	return retval;
++}
++#endif /* CONFIG_ARCH_REALTEK */
++
+ static int snd_compr_next_track(struct snd_compr_stream *stream)
+ {
+ 	int retval;
+@@ -1001,7 +1015,11 @@ static long snd_compr_ioctl(struct file *f, unsigned int cmd, unsigned long arg)
+ 	case _IOC_NR(SNDRV_COMPRESS_NEXT_TRACK):
+ 		retval = snd_compr_next_track(stream);
+ 		break;
+-
++#ifdef CONFIG_ARCH_REALTEK
++	case _IOC_NR(SNDRV_COMPRESS_GET_LATENCY):
++		retval = snd_compr_get_latency(stream, arg);
++		break;
++#endif /* CONFIG_ARCH_REALTEK */
+ 	}
+ 	mutex_unlock(&stream->device->lock);
+ 	return retval;
+diff --git a/sound/core/memalloc.c b/sound/core/memalloc.c
+index 0f335162f..b822c4481 100644
+--- a/sound/core/memalloc.c
++++ b/sound/core/memalloc.c
+@@ -2,7 +2,7 @@
+ /*
+  *  Copyright (c) by Jaroslav Kysela <perex@perex.cz>
+  *                   Takashi Iwai <tiwai@suse.de>
+- * 
++ *
+  *  Generic memory allocators
+  */
+ 
+@@ -11,6 +11,7 @@
+ #include <linux/dma-mapping.h>
+ #include <linux/genalloc.h>
+ #include <linux/vmalloc.h>
++
+ #ifdef CONFIG_X86
+ #include <asm/set_memory.h>
+ #endif
+diff --git a/sound/core/pcm_compat.c b/sound/core/pcm_compat.c
+index a226d8f24..af2be44c7 100644
+--- a/sound/core/pcm_compat.c
++++ b/sound/core/pcm_compat.c
+@@ -598,6 +598,14 @@ static long snd_pcm_ioctl_compat(struct file *file, unsigned int cmd, unsigned l
+ 	case SNDRV_PCM_IOCTL_XRUN:
+ 	case SNDRV_PCM_IOCTL_LINK:
+ 	case SNDRV_PCM_IOCTL_UNLINK:
++#ifdef CONFIG_ARCH_REALTEK
++	case SNDRV_PCM_IOCTL_VOLUME_SET:
++	case SNDRV_PCM_IOCTL_VOLUME_GET:
++	case SNDRV_PCM_IOCTL_EQ_SET:
++	case SNDRV_PCM_IOCTL_AO_PARAMETER_SET:
++	case SNDRV_PCM_IOCTL_GET_LATENCY:
++	case SNDRV_PCM_IOCTL_MMAP_DATA_FD:
++#endif /* CONFIG_ARCH_REALTEK */
+ 	case __SNDRV_PCM_IOCTL_SYNC_PTR32:
+ 		return snd_pcm_common_ioctl(file, substream, cmd, argp);
+ 	case __SNDRV_PCM_IOCTL_SYNC_PTR64:
+diff --git a/sound/core/pcm_lib.c b/sound/core/pcm_lib.c
+index 45afef732..e01305615 100644
+--- a/sound/core/pcm_lib.c
++++ b/sound/core/pcm_lib.c
+@@ -355,7 +355,8 @@ static int snd_pcm_update_hw_ptr0(struct snd_pcm_substream *substream,
+ 			goto no_delta_check;
+ 		hdelta = jdelta - delta * HZ / runtime->rate;
+ 		xrun_threshold = runtime->hw_ptr_buffer_jiffies / 2 + 1;
+-		while (hdelta > xrun_threshold) {
++		while (hdelta > xrun_threshold &&
++				((hw_base + runtime->buffer_size + pos) <= runtime->control->appl_ptr)) {
+ 			delta += runtime->buffer_size;
+ 			hw_base += runtime->buffer_size;
+ 			if (hw_base >= runtime->boundary) {
+diff --git a/sound/core/pcm_native.c b/sound/core/pcm_native.c
+index 6579802c5..bf73b38e2 100644
+--- a/sound/core/pcm_native.c
++++ b/sound/core/pcm_native.c
+@@ -3328,6 +3328,22 @@ static int snd_pcm_common_ioctl(struct file *file,
+ 		return snd_pcm_rewind_ioctl(substream, arg);
+ 	case SNDRV_PCM_IOCTL_FORWARD:
+ 		return snd_pcm_forward_ioctl(substream, arg);
++#ifdef CONFIG_ARCH_REALTEK
++	case SNDRV_PCM_IOCTL_VOLUME_SET:
++	case SNDRV_PCM_IOCTL_VOLUME_GET:
++	case SNDRV_PCM_IOCTL_EQ_SET:
++	case SNDRV_PCM_IOCTL_AO_PARAMETER_SET:
++	case SNDRV_PCM_IOCTL_GET_LATENCY:
++	case SNDRV_PCM_IOCTL_GET_FW_DELAY:
++	case SNDRV_PCM_IOCTL_MMAP_DATA_FD:
++		snd_printd("############## %s %d\n", __func__, __LINE__);
++		snd_printd("substream->name = %s\n", substream->pcm->card->driver);
++		/* realtek sound card driver name */
++		if((strcmp(substream->pcm->card->driver, "snd_alsa_rtk") == 0))
++			substream->ops->ioctl(substream, cmd, arg);
++
++		return 0;
++#endif /* CONFIG_ARCH_REALTEK */
+ 	}
+ 	pcm_dbg(substream->pcm, "unknown ioctl = 0x%x\n", cmd);
+ 	return -ENOTTY;
+diff --git a/sound/soc/Kconfig b/sound/soc/Kconfig
+index 71a6fe87d..3d2ec79a6 100644
+--- a/sound/soc/Kconfig
++++ b/sound/soc/Kconfig
+@@ -77,6 +77,7 @@ source "sound/soc/ux500/Kconfig"
+ source "sound/soc/xilinx/Kconfig"
+ source "sound/soc/xtensa/Kconfig"
+ source "sound/soc/zte/Kconfig"
++source "sound/soc/realtek/Kconfig"
+ 
+ # Supported codecs
+ source "sound/soc/codecs/Kconfig"
+diff --git a/sound/soc/Makefile b/sound/soc/Makefile
+index ddbac3a21..1ecf68e2f 100644
+--- a/sound/soc/Makefile
++++ b/sound/soc/Makefile
+@@ -60,3 +60,4 @@ obj-$(CONFIG_SND_SOC)	+= ux500/
+ obj-$(CONFIG_SND_SOC)	+= xilinx/
+ obj-$(CONFIG_SND_SOC)	+= xtensa/
+ obj-$(CONFIG_SND_SOC)	+= zte/
++obj-$(CONFIG_SND_SOC)	+= realtek/
+-- 
+2.17.1
+

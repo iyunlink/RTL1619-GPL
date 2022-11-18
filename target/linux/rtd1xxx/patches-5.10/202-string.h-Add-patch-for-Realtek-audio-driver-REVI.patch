@@ -1,0 +1,27 @@
+From 932baf6e95eebcf37598fd5c23eb1e7f5d14b2bd Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Mon, 3 Aug 2020 23:08:31 +0800
+Subject: [PATCH 04/54] 202: string.h: Add patch for Realtek audio driver
+ [REVIEWER] YH
+
+---
+ include/linux/string.h | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/include/linux/string.h b/include/linux/string.h
+index b1f3894a0..c75a1f190 100644
+--- a/include/linux/string.h
++++ b/include/linux/string.h
+@@ -83,6 +83,9 @@ extern char * strstr(const char *, const char *);
+ #endif
+ #ifndef __HAVE_ARCH_STRNSTR
+ extern char * strnstr(const char *, const char *, size_t);
++#ifdef CONFIG_ARCH_REALTEK
++extern void * memmem(const void *, size_t, const void *, size_t);
++#endif /* CONFIG_ARCH_REALTEK */
+ #endif
+ #ifndef __HAVE_ARCH_STRLEN
+ extern __kernel_size_t strlen(const char *);
+-- 
+2.17.1
+

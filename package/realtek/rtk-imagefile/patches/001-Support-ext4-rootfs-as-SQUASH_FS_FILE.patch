@@ -1,0 +1,23 @@
+Index: rtk-imagefile-1bb079a/components/Makefile
+===================================================================
+--- rtk-imagefile-1bb079a.orig/components/Makefile
++++ rtk-imagefile-1bb079a/components/Makefile
+@@ -100,7 +100,7 @@ TMP_RSA_OUT         = rsa_enc.bin
+ ####
+ LIBFILE=`cat packages/$(TARGET)/system/vendor/lib/mediadrm/lib.List`
+ TAFILE=`ls packages/$(TARGET)/system/lib/teetz`
+-SQUASH_FS_FILE=squashfs1.img
++SQUASH_FS_FILE?=squashfs1.img
+ OVERLAY_FS_FILE=overlayfs.bin
+ MYZLIB_PATH = $(CURDIR)/bin/myzlib
+ E2FSCK_PATH = $(CURDIR)/bin/e2fsck
+@@ -1141,9 +1141,6 @@ collect_file:
+ 
+ 	$(QUIET) if [ '$(LNX_IMGS)' = 'y' ]; then \
+ 		echo "Start copying ext4fs images ....."; \
+-		if [ '$(ROOTFS_TYPE)' = 'ext4fs' ]; then \
+-			cp $(TMP)/$(EXT4FS_ROOTFSIMG) $(TMP)/pkgfile/$(TARGET)/; \
+-		fi; \
+ 	fi
+ 
+ .PHONY: process_image

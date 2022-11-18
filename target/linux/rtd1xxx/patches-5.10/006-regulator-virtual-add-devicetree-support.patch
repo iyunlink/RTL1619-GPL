@@ -1,0 +1,74 @@
+From c27aeefc201e76d5564d7069dd3b8f9f9ad06996 Mon Sep 17 00:00:00 2001
+From: Vincent Whitchurch <vincent.whitchurch@axis.com>
+Date: Tue, 1 Mar 2022 12:18:31 +0100
+Subject: regulator: virtual: add devicetree support
+
+The reg-virt-consumer is very useful for development and testing of
+regulator drivers since it allows voltages and modes to be set from
+userspace.  However, it currently requires platform data so it cannot be
+used without patching the kernel.  Add support for probing it from the
+devicetree to remedy this.
+
+Since this driver is only meant for testing and is a purely software
+construct, no binding documentation is added.
+
+Signed-off-by: Vincent Whitchurch <vincent.whitchurch@axis.com>
+Link: https://lore.kernel.org/r/20220301111831.3742383-4-vincent.whitchurch@axis.com
+Signed-off-by: Mark Brown <broonie@kernel.org>
+---
+ drivers/regulator/virtual.c | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/drivers/regulator/virtual.c b/drivers/regulator/virtual.c
+index ccb38d99bb732..e2a4a5b38b121 100644
+--- a/drivers/regulator/virtual.c
++++ b/drivers/regulator/virtual.c
+@@ -13,6 +13,7 @@
+ #include <linux/regulator/consumer.h>
+ #include <linux/slab.h>
+ #include <linux/module.h>
++#include <linux/of.h>
+ 
+ struct virtual_consumer_data {
+ 	struct mutex lock;
+@@ -281,6 +282,14 @@ static const struct attribute_group regulator_virtual_attr_group = {
+ 	.attrs	= regulator_virtual_attributes,
+ };
+ 
++#ifdef CONFIG_OF
++static const struct of_device_id regulator_virtual_consumer_of_match[] = {
++	{ .compatible = "regulator-virtual-consumer" },
++	{},
++};
++MODULE_DEVICE_TABLE(of, regulator_virtual_consumer_of_match);
++#endif
++
+ static int regulator_virtual_probe(struct platform_device *pdev)
+ {
+ 	char *reg_id = dev_get_platdata(&pdev->dev);
+@@ -305,6 +314,14 @@ static int regulator_virtual_probe(struct platform_device *pdev)
+ 	if (drvdata == NULL)
+ 		return -ENOMEM;
+ 
++	/*
++	 * This virtual consumer does not have any hardware-defined supply
++	 * name, so just allow the regulator to be specified in a property
++	 * named "default-supply" when we're being probed from devicetree.
++	 */
++	if (!reg_id && pdev->dev.of_node)
++		reg_id = "default";
++
+ 	mutex_init(&drvdata->lock);
+ 
+ 	drvdata->regulator = devm_regulator_get(&pdev->dev, reg_id);
+@@ -347,6 +364,7 @@ static struct platform_driver regulator_virtual_consumer_driver = {
+ 	.remove		= regulator_virtual_remove,
+ 	.driver		= {
+ 		.name		= "reg-virt-consumer",
++		.of_match_table = of_match_ptr(regulator_virtual_consumer_of_match),
+ 	},
+ };
+ 
+-- 
+2.17.1
+

@@ -1,0 +1,11 @@
+--- a/drivers/net/wireless/realtek/rtkwifiu/rtl8822cs/include/drv_conf.h
++++ b/drivers/net/wireless/realtek/rtkwifiu/rtl8822cs/include/drv_conf.h
+@@ -749,6 +749,8 @@ defined(CONFIG_RTL8723F) /*|| defined(CO
+ 	#endif
+ #endif
+ 
++#define CONFIG_RTW_IOCTL_SET_COUNTRY
++
+ #ifdef CONFIG_RTW_80211K
+ 	#ifndef CONFIG_RTW_ACS
+ 		#define CONFIG_RTW_ACS

@@ -1,0 +1,45 @@
+From 92d2281036b185bf29f7a9555fbcd3b95a2ea903 Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Mon, 3 Aug 2020 23:08:49 +0800
+Subject: lib/string: Add patch for Realtek audio driver [REVIEWER] YH
+
+---
+ lib/string.c | 22 ++++++++++++++++++++++
+ 1 file changed, 22 insertions(+)
+
+diff --git a/lib/string.c b/lib/string.c
+index 4288e0158d47..f0b0c4c71392 100644
+--- a/lib/string.c
++++ b/lib/string.c
+@@ -1039,6 +1039,28 @@ char *strnstr(const char *s1, const char *s2, size_t len)
+ 	return NULL;
+ }
+ EXPORT_SYMBOL(strnstr);
++#ifdef CONFIG_ARCH_REALTEK
++/**
++ *  * memmem - Find the first length-limited substring in a length-limited string
++ *   * @s1: The string to be searched
++ *    * @len1: the maximum number of characters to search
++ *     * @s2: The string to search for
++ *      * @len2: the length of the string being searched
++ *       */
++void *memmem(const void *s1, size_t len1, const void *s2, size_t len2)
++{
++	    if (!len2)
++		            return (void *)s1;
++	        while (len1 >= len2) {
++			        len1--;
++				        if (!memcmp(s1, s2, len2))
++						            return (void *)s1;
++					        s1++;
++						    }
++		    return NULL;
++}
++EXPORT_SYMBOL(memmem);
++#endif /* CONFIG_ARCH_REALTEK */
+ #endif
+ 
+ #ifndef __HAVE_ARCH_MEMCHR
+-- 
+2.25.1
+

@@ -1,0 +1,194 @@
+
+config REALTEK_PM
+	tristate "Realtek power management driver"
+	default y
+	help
+	  Suspend to RAM and shutdown support.
+
+config RTK_PM_ALARM
+	tristate "Realtek Alarm Emulation"
+	depends on REALTEK_PM
+	default y
+	help
+	  Support for Alarm Emulation
+
+config RTK_PM_HIFI
+	tristate "Realtek HIFI PM"
+	depends on REALTEK_PM
+	default y
+	help
+	  Support for Realtek HIFI PM
+
+config RTK_MCP
+	tristate "Realtek MCP driver"
+	default n
+	help
+	  Realtek MCP driver
+
+config RTK_SMCC
+	tristate "Realtek SMCC driver"
+	depends on REALTEK_SOC
+	default y
+	help
+	  Realtek SMCC driver
+
+config RTK_USB_CTRL_MANAGER
+	tristate "RTK Multiple USB Host/Device Controller Manager"
+	default y if USB_OHCI_RTK || USB_EHCI_RTK || USB_DWC3_RTK
+	help
+	  The Realtek chips are Multiple host/peripheral USB controllers.
+	  Enable the driver to control clock, reset and usb power gpio.
+
+config REALTEK_CHIP_INFO
+	tristate "Realtek SoC information"
+	default y
+	select SOC_BUS
+	help
+	  The Realtek chips information.
+
+config RTK_TP
+	tristate "Realtek TP Device Driver"
+	default y
+	help
+	  This driver provides PM and userspace driver interface of TP.
+
+config RTK_FAN
+	tristate "RTK Fan driver"
+	default n
+	help
+	  Realtek Fan driver
+
+config RTK_FSS
+	tristate "Realtek FSS Driver"
+	default n
+	help
+	  This enable Realtek FSS generic control interface.
+	  If not sure say N.
+
+config RTK_FSS_SCAN
+	tristate "Realtek FSS Scan Driver"
+	default n
+	depends on RTK_FSS
+	help
+	  This enable FSS Scan control interface, if not sure say N.
+
+config RTK_RTC_RELOAD
+        bool "Realtek RTC Reload Driver"
+	default y if RTC_DRV_SW
+	help
+	  This helps to reload time of rtc0 from a hw register.
+
+	  if not sure, say N.
+
+config RTK_VCPU
+	tristate "Realtek VCPU driver"
+	select DEVFREQ_GOV_USERSPACE if PM_DEVFREQ
+	default y
+	help
+	  This enables Realtek VCPU driver.
+
+config RTK_VE3_UART
+	tristate "Realtek VE3 uart driver"
+	default y
+	help
+	  This enables Realtek VE3 Pseudo Uart driver.
+
+config RTK_DPI_COORD
+	tristate "Realtek DPI coordinator driver"
+	default y
+	help
+	  This enables Realtek DPI coordinator driver
+
+config RTK_GPIO_DEFAULT
+	tristate "Realtek GPIO default setting driver"
+	default y
+	help
+	  This enables Realtek GPIO default setting driver to set gpio default value.
+
+config RTK_VSFC_CTRL
+	tristate "Realtek VSFC Controller"
+	depends on COMMON_CLK && REGULATOR
+	help
+	  This enables Realtek VSFC controller
+
+config RTK_CPUHP_QOS
+	tristate
+
+config RTK_CPUHP_CONTROL
+	tristate "Realtek CPU Hotplug Controller"
+	select RTK_CPUHP_QOS
+	help
+	  This enables Realtek CPU Hotplug Controller
+
+config RTK_CPUHP_SYSFS
+	tristate "Realtek CPU Hotplug SysFS"
+	select RTK_CPUHP_QOS
+	help
+	  This enables Realtek CPU Hotplug SysFS
+
+config RTK_ACPU_VE1
+	bool "Realtek ACPU VE1 Driver"
+	help
+	   This driver provides ACPU VE1 controls
+
+config RTK_BSV_CTRL
+	tristate "Realtek BSV Controller for CPU DVFS"
+	help
+	  This driver provides CPU voltage conversion based
+	  on input frequency, if BSV OTP is valid.
+
+config RTK_DBGPROT
+	tristate "Realtek Debug Protection Driver"
+	help
+	  This driver provides Debug Protection infomation.
+
+config RTK_DCO
+	tristate "Realtek DCO Driver"
+	help
+	  The driver provides DCO recalibrate.
+
+config RTK_MEM_REMAP
+	tristate "Realtek RPC Memory Remapping"
+	default y
+	help
+	  The driver provides memory remapping for realtek rpc mechanism.
+
+config RTK_REFCLK
+	tristate "Realtek Refclk Driver"
+	default y
+	help
+	  The driver provides refclk.
+
+config RTK_AVCPU_LOG
+	bool "Realtek AVCPU share memory logging system"
+	depends on REALTEK_RPC
+	help
+	  Enable AVCPU share memory logging read from userspace
+	  via device node.
+
+config RTK_IFCP_CLIENT
+	tristate "Realtek IFCP client driver"
+	depends on RTK_IFCP && RTK_IFCP_MBOX
+	help
+	  Realtek IFCP client driver
+
+config RTK_DEMOD
+	tristate "Realtek Demod Device Driver"
+	default y
+	help
+	  This driver provides userspace interface of Demod.
+
+source "drivers/soc/realtek/common/rpc/Kconfig"
+source "drivers/soc/realtek/common/mem_allocator/Kconfig"
+source "drivers/soc/realtek/common/hse/Kconfig"
+source "drivers/soc/realtek/common/buflock/Kconfig"
+source "drivers/soc/realtek/common/rtk_pd/Kconfig"
+source "drivers/soc/realtek/common/dvfs/Kconfig"
+source "drivers/soc/realtek/common/rtk_scd/Kconfig"
+source "drivers/soc/realtek/common/gpu/Kconfig"
+
+config RTK_MDL
+        tristate "Realtek MDL Driver"
+        default n
+        help
+          Realtek MDL driver.

@@ -1,0 +1,28 @@
+From 7eac3ab733d0d9a0a1b8ef00fab69aafd63eef73 Mon Sep 17 00:00:00 2001
+From: phinex <phinex@realtek.com>
+Date: Fri, 17 Dec 2021 17:39:55 +0800
+Subject: [PATCH] [DEV_CHG] Enable 4 threads for RAID5 XOR operation
+
+Change-Id: I4ac7c18b0db6eb8188d90e0938131506a47271ff
+---
+ drivers/md/raid5.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/drivers/md/raid5.c b/drivers/md/raid5.c
+index c82953a3299e..0176ec045daf 100644
+--- a/drivers/md/raid5.c
++++ b/drivers/md/raid5.c
+@@ -7211,8 +7211,8 @@ static struct r5conf *setup_conf(struct mddev *mddev)
+ 		goto abort;
+ 	for (i = 0; i < PENDING_IO_MAX; i++)
+ 		list_add(&conf->pending_data[i].sibling, &conf->free_list);
+-	/* Don't enable multi-threading by default*/
+-	if (!alloc_thread_groups(conf, 0, &group_cnt, &new_group)) {
++	/* Enable 4 threads by default*/
++	if (!alloc_thread_groups(conf, 4, &group_cnt, &new_group)) {
+ 		conf->group_cnt = group_cnt;
+ 		conf->worker_cnt_per_group = 0;
+ 		conf->worker_groups = new_group;
+-- 
+2.17.1
+

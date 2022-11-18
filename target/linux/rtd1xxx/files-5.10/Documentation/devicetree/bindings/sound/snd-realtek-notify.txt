@@ -1,0 +1,27 @@
+Realtek Sound Pinmux Driver.
+
+Required properties:
+- compatible : "adc"
+				"analog-in"
+				"adc-amic"
+				"earc-combo"
+				"realtek,audio-in"
+				"realtek,audio-out"
+				"realtek,audio"
+- reg : The register base for the controller.
+- interrupts : One interrupt, used by the controller.
+- #address-cells : <1>, as required by generic sound device binding.
+- #size-cells : <0>, also as required by generic sound device binding.
+- pinctrl-names : Names of pinmux set of corresponding output mode.
+- pinctrl-0 : The default pinmux set.
+- num-chipselect : The number of chipselects. It should be 1.
+- bus-num : The bus number of this sound device controller.
+- clock-frequency : The max. frequency of this sound device controller.
+- clocks : phandles for the clocks
+- resets : phandles for the resets
+
+Child nodes as per the generic sound device binding.
+
+Example:
+
+

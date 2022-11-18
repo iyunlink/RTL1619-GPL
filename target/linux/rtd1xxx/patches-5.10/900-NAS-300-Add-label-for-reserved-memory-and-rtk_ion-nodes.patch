@@ -1,0 +1,34 @@
+From a36227c96ddd3b0405057485d363632afb4795ab Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 15:31:03 +0800
+Subject: Add label for reserved-memory and rtk_ion nodes
+
+---
+ arch/arm64/boot/dts/realtek/rtd16xxb.dtsi | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+index 82bb96225..f7b340ca8 100644
+--- a/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
++++ b/arch/arm64/boot/dts/realtek/rtd16xxb.dtsi
+@@ -31,7 +31,7 @@
+ 		mmc0 = &emmc;
+ 	};
+ 
+-	reserved-memory {
++	reserved_memory: reserved-memory {
+ 		#address-cells = <1>;
+ 		#size-cells = <1>;
+ 		ranges;
+@@ -846,7 +846,7 @@
+ 		};
+ 	};
+ 
+-	rtk,ion {
++	rtk_ion: rtk,ion {
+ 		compatible = "realtek,rtk-ion";
+ 		#address-cells = <1>;
+ 		#size-cells = <0>;
+-- 
+2.17.1
+

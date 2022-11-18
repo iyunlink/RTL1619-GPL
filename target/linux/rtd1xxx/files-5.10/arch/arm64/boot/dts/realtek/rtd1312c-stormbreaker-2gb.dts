@@ -1,0 +1,106 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2019-2021 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd1312c-stormbreaker.dtsi"
+
+/ {
+	compatible = "realtek,storm-breaker", "realtek,rtd1312c";
+	model = "Realtek Storm Breaker EVB(2GB, TEE)";
+
+	memory@40000 {
+		device_type = "memory";
+		reg = <0x00040000 0x7ffc0000>; /* 2 GiB */
+	};
+
+	chosen {
+		linux,initrd-start = <0x03100000>;
+		linux,initrd-end = <0x03500000>;
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,460800 init=/init loop.max_part=7 androidboot.storage=emmc androidboot.hardware=groot";
+	};
+};
+
+&uart1 {
+	status = "okay";
+};
+
+&rfkill {
+	status = "okay";
+};
+
+&reserved_memory {
+	audio_heap@4200000 {
+		compatible = "audio_heap";
+		reg = <0x04200000 0xc0000>;
+	};
+
+	media_heap@4e00000 {
+		compatible = "media_heap";
+		reg = <0x04e00000 0x02000000>;
+	};
+
+	tee@10100000 {
+		reg = <0x10100000 0x1400000>;
+	};
+
+	linux,default_cma {
+		status = "disabled";
+	};
+
+	linux,cma_1 {
+		status = "disabled";
+	};
+
+	linux,cma_2 {
+		size = <0x400000>;
+		status = "disabled";
+	};
+
+	linux,cma_3 {
+		size = <0xa000000>;
+	};
+
+	linux,cma_4 {
+		status = "disabled";
+	};
+
+	linux,cma_5 {
+		size = <0x01000000>;
+	};
+
+	linux,cma_6 {
+		size = <0x1c00000>;
+	};
+
+	linux,cma_7 {
+		size = <0x400000>;
+	};
+
+	linux,cma_8 {
+		size = <0x6000000>;
+		status = "disabled";
+	};
+
+	linux,cma_9 {
+		size = <0x4000000>;
+		status = "disabled";
+	};
+};
+
+&rtk_ion {
+	rtk,ion-heap@7 {
+		rtk,memory-reserve = <0x04e00000 0x02000000 RTK_FLAG_ION_HEAP
+				      0x00C40000 0x003C4000 RTK_FLAG_PROTECTED_DYNAMIC_METADATA>;
+	};
+
+	rtk,ion-heap@8 {
+		rtk,memory-reserve = <0x04200000 0x000c0000 RTK_FLAG_ION_HEAP>;
+	};
+};
+
+&rtk_fb {
+	resolution = <1280 720>;
+};

@@ -1,0 +1,19 @@
+- undocumented compatible are listed below, in alphabetical order
+arm,mali-midgard
+arm,mali-simple-power-model
+realtek,clk-det
+realtek,dbgprot
+realtek,highspeed-i2c
+realtek,highspeed-streaming-engine
+realtek,i2c
+realtek,rtd1319-mali
+realtek,rtd1319-scpu-wrapper
+realtek,rtd1319-vcpu
+realtek,rtd1619b-highspeed-streaming-engine
+realtek,rtd1619b-mali
+realtek,rtd1619b-otp
+realtek,rtd1619b-scpu-wrapper
+realtek,sb2-sem
+realtek,scpu-wrapper-fss
+realtek,sysbrg2-inv
+realtek,tp

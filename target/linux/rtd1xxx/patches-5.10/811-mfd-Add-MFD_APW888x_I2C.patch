@@ -1,0 +1,47 @@
+From 96467e153756a29e02d9b49bb5df5c4426d1d789 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:19:34 +0800
+Subject: [PATCH 30/54] 811: mfd: Add MFD_APW888x_I2C
+
+---
+ drivers/mfd/Kconfig  | 11 +++++++++++
+ drivers/mfd/Makefile |  2 ++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/drivers/mfd/Kconfig b/drivers/mfd/Kconfig
+index b8847ae04..0e190c3ce 100644
+--- a/drivers/mfd/Kconfig
++++ b/drivers/mfd/Kconfig
+@@ -2168,5 +2168,16 @@ config MFD_INTEL_M10_BMC
+ 	  additional drivers must be enabled in order to use the functionality
+ 	  of the device.
+ 
++config MFD_APW8889_I2C
++	tristate "Support for Anpec-APW8889 PMIC"
++	depends on I2C
++	select MFD_CORE
++	select REGMAP_I2C
++
++config MFD_APW8886_I2C
++	tristate "Support for Anpec-APW8886 PMIC"
++	depends on I2C
++	select MFD_CORE
++	select REGMAP_I2C
+ endmenu
+ endif
+diff --git a/drivers/mfd/Makefile b/drivers/mfd/Makefile
+index 1780019d2..81a0e86eb 100644
+--- a/drivers/mfd/Makefile
++++ b/drivers/mfd/Makefile
+@@ -253,6 +253,8 @@ obj-$(CONFIG_MFD_ALTERA_SYSMGR) += altera-sysmgr.o
+ obj-$(CONFIG_MFD_STPMIC1)	+= stpmic1.o
+ obj-$(CONFIG_MFD_SUN4I_GPADC)	+= sun4i-gpadc.o
+ 
++obj-$(CONFIG_MFD_APW8889_I2C) += apw8889-i2c.o
++obj-$(CONFIG_MFD_APW8886_I2C) += apw8886-i2c.o
+ obj-$(CONFIG_MFD_STM32_LPTIMER)	+= stm32-lptimer.o
+ obj-$(CONFIG_MFD_STM32_TIMERS) 	+= stm32-timers.o
+ obj-$(CONFIG_MFD_MXS_LRADC)     += mxs-lradc.o
+-- 
+2.17.1
+

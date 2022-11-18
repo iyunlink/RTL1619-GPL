@@ -1,0 +1,9 @@
+config DRM_RTK
+	tristate "DRM Support for Realtek SoCs"
+	depends on DRM
+	help
+	  Choose this option if you have a Realtek SoCs.
+	  The module will be called realtek-drm
+	  This driver provides kernel mode setting and
+	  buffer management to userspace.
+

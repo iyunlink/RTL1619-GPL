@@ -1,0 +1,37 @@
+From 2570343473f3fc95b1079533f5dbf41b636b98e6 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:34:25 +0800
+Subject: [PATCH 42/54] 823: soc/realtek: Add RTD soc driver
+
+---
+ drivers/soc/Kconfig  | 1 +
+ drivers/soc/Makefile | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/drivers/soc/Kconfig b/drivers/soc/Kconfig
+index 425ab6f7e..925647993 100644
+--- a/drivers/soc/Kconfig
++++ b/drivers/soc/Kconfig
+@@ -11,6 +11,7 @@ source "drivers/soc/imx/Kconfig"
+ source "drivers/soc/ixp4xx/Kconfig"
+ source "drivers/soc/mediatek/Kconfig"
+ source "drivers/soc/qcom/Kconfig"
++source "drivers/soc/realtek/Kconfig"
+ source "drivers/soc/renesas/Kconfig"
+ source "drivers/soc/rockchip/Kconfig"
+ source "drivers/soc/samsung/Kconfig"
+diff --git a/drivers/soc/Makefile b/drivers/soc/Makefile
+index 36452bed8..2b5b048bf 100644
+--- a/drivers/soc/Makefile
++++ b/drivers/soc/Makefile
+@@ -17,6 +17,7 @@ obj-$(CONFIG_SOC_XWAY)		+= lantiq/
+ obj-y				+= mediatek/
+ obj-y				+= amlogic/
+ obj-y				+= qcom/
++obj-$(CONFIG_ARCH_REALTEK)	+= realtek/
+ obj-y				+= renesas/
+ obj-$(CONFIG_ARCH_ROCKCHIP)	+= rockchip/
+ obj-$(CONFIG_SOC_SAMSUNG)	+= samsung/
+-- 
+2.17.1
+

@@ -1,0 +1,20 @@
+Realtek reboot driver
+
+Required properties:
+
+- compatible: should be "realtek,reboot"
+
+Optional properties:
+
+- rst-oe: an unsigned int for value of oe to be configured
+
+- rst-oe-for-init: an unsigned int for init value of oe
+
+Example:
+        reboot {
+		compatible = "realtek,reboot";
+		rst-oe = <0>;
+		rst-oe-for-init = <1>;
+		status = "okay";
+	};
+

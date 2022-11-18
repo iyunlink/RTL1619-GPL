@@ -1,0 +1,46 @@
+// SPDX-License-Identifier: GPL-2.0
+/* Copyright (C) 2020 Realtek Semiconductor Corporation
+ */
+&efuse {
+	otp_bond_id: bond_id@3c8,0 {
+		reg = <0x3c8 0x4>;
+	};
+	otp_etn_rc_r_amp_cal: etn_rc_r_amp_cal@504,0 {
+		reg = <0x504 0x8>;
+	};
+	otp_usb_cal: usb-cal@528,0 {
+		reg = <0x528 0xa>;
+		bits = <0 77>;
+	};
+	otp_usb_port0_dc_cal: usb-port0-dc-cal@534,0 {
+		reg = <0x534 0x1>;
+		bits = <0 4>;
+	};
+	otp_usb_port1_dc_cal: usb-port1-dc-cal@534,4 {
+		reg = <0x534 0x1>;
+		bits = <4 4>;
+	};
+	otp_usb_port2_dc_cal: usb-port2-dc-cal@535,0 {
+		reg = <0x535 0x1>;
+		bits = <0 4>;
+	};
+	otp_usb_u3_tx_lfps_swing_trim: usb_u3_tx_lfps_swing_trim@a18,0 {
+		reg = <0xa18 0x1>;
+		bits = <0 4>;
+	};
+	otp_usb_port0_dc_dis: usb-port0-dc-dis@ae1,0 {
+		reg = <0xae1 0x1>;
+		bits = <0 4>;
+	};
+	otp_usb_port1_dc_dis: usb-port1-dc-dis@ae1,4 {
+		reg = <0xae1 0x1>;
+		bits = <4 4>;
+	};
+	otp_usb_port2_dc_dis: usb-port2-dc-dis@ae2,0 {
+		reg = <0xae2 0x1>;
+		bits = <0 4>;
+	};
+	otp_emmc_pkg_cal: emmc_pkg_cal@540,0 {
+		reg = <0x540 0x4>;
+	};
+};

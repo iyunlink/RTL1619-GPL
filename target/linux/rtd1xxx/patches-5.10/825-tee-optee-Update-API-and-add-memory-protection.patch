@@ -1,0 +1,477 @@
+From a558de8f72944bbe1f7dc11b3ebd69bea3bf7b71 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:38:26 +0800
+Subject: [PATCH 44/54] 825: tee: optee: Update API and add memory protection
+
+---
+ drivers/tee/Makefile              |   1 +
+ drivers/tee/optee/Kconfig         |  16 +++++
+ drivers/tee/optee/Makefile        |   5 +-
+ drivers/tee/optee/call.c          |  14 ++++
+ drivers/tee/optee/core.c          |  32 ++++++++-
+ drivers/tee/optee/optee_private.h |   3 +
+ drivers/tee/tee_core.c            |  42 ++++++++++++
+ drivers/tee/tee_shm.c             | 105 +++++++++++++++++++++++++++++-
+ 8 files changed, 215 insertions(+), 3 deletions(-)
+
+diff --git a/drivers/tee/Makefile b/drivers/tee/Makefile
+index 68da044af..8bb1ed3d1 100644
+--- a/drivers/tee/Makefile
++++ b/drivers/tee/Makefile
+@@ -1,4 +1,5 @@
+ # SPDX-License-Identifier: GPL-2.0
++
+ obj-$(CONFIG_TEE) += tee.o
+ tee-objs += tee_core.o
+ tee-objs += tee_shm.o
+diff --git a/drivers/tee/optee/Kconfig b/drivers/tee/optee/Kconfig
+index 3ca71e381..07b4dc24c 100644
+--- a/drivers/tee/optee/Kconfig
++++ b/drivers/tee/optee/Kconfig
+@@ -8,6 +8,22 @@ config OPTEE
+ 	  This implements the OP-TEE Trusted Execution Environment (TEE)
+ 	  driver.
+ 
++choice
++	prompt "Realtek DHC SoC memory protection support"
++	depends on OPTEE
++	depends on ION_RTK_DHC_HEAP
++	default OPTEE_MEM_API
++	help
++	  This implements the Realtek DHC SoC's memory protection mechanism.
++
++config OPTEE_MEM_API
++	bool "Enable"
++
++config OPTEE_MEM_API_DIS
++	bool "Disable"
++
++endchoice
++
+ config OPTEE_SHM_NUM_PRIV_PAGES
+ 	int "Private Shared Memory Pages"
+ 	default 1
+diff --git a/drivers/tee/optee/Makefile b/drivers/tee/optee/Makefile
+index 56263ae3b..f1049bb94 100644
+--- a/drivers/tee/optee/Makefile
++++ b/drivers/tee/optee/Makefile
+@@ -1,5 +1,8 @@
+ # SPDX-License-Identifier: GPL-2.0
+-obj-$(CONFIG_OPTEE) += optee.o
++
++ccflags-y += -I$(srctree)/drivers/soc/realtek/common/mem_allocator/rtk/inc
++
++obj-$(CONFIG_OPTEE) += optee.o tee_mem_api.o
+ optee-objs += core.o
+ optee-objs += call.o
+ optee-objs += rpc.o
+diff --git a/drivers/tee/optee/call.c b/drivers/tee/optee/call.c
+index f8f1594be..74fdd6568 100644
+--- a/drivers/tee/optee/call.c
++++ b/drivers/tee/optee/call.c
+@@ -15,6 +15,8 @@
+ #include "optee_private.h"
+ #include "optee_smc.h"
+ 
++#include <trace/events/optee.h>
++
+ struct optee_call_waiter {
+ 	struct list_head list_node;
+ 	struct completion c;
+@@ -254,10 +256,12 @@ int optee_open_session(struct tee_context *ctx,
+ 		goto out;
+ 	}
+ 
++	trace_optee_open_session_entry(arg, msg_arg);
+ 	if (optee_do_call_with_arg(ctx, msg_parg)) {
+ 		msg_arg->ret = TEEC_ERROR_COMMUNICATION;
+ 		msg_arg->ret_origin = TEEC_ORIGIN_COMMS;
+ 	}
++	trace_optee_open_session_exit(arg, msg_arg);
+ 
+ 	if (msg_arg->ret == TEEC_SUCCESS) {
+ 		/* A new session has been created, add it to the list. */
+@@ -309,7 +313,9 @@ int optee_close_session(struct tee_context *ctx, u32 session)
+ 
+ 	msg_arg->cmd = OPTEE_MSG_CMD_CLOSE_SESSION;
+ 	msg_arg->session = session;
++	trace_optee_close_session_entry(msg_arg);
+ 	optee_do_call_with_arg(ctx, msg_parg);
++	trace_optee_close_session_exit(msg_arg);
+ 
+ 	tee_shm_free(shm);
+ 	return 0;
+@@ -344,6 +350,7 @@ int optee_invoke_func(struct tee_context *ctx, struct tee_ioctl_invoke_arg *arg,
+ 	if (rc)
+ 		goto out;
+ 
++	trace_optee_invoke_func_entry(msg_arg);
+ 	if (optee_do_call_with_arg(ctx, msg_parg)) {
+ 		msg_arg->ret = TEEC_ERROR_COMMUNICATION;
+ 		msg_arg->ret_origin = TEEC_ORIGIN_COMMS;
+@@ -353,6 +360,7 @@ int optee_invoke_func(struct tee_context *ctx, struct tee_ioctl_invoke_arg *arg,
+ 		msg_arg->ret = TEEC_ERROR_COMMUNICATION;
+ 		msg_arg->ret_origin = TEEC_ORIGIN_COMMS;
+ 	}
++	trace_optee_invoke_func_exit(msg_arg);
+ 
+ 	arg->ret = msg_arg->ret;
+ 	arg->ret_origin = msg_arg->ret_origin;
+@@ -383,7 +391,9 @@ int optee_cancel_req(struct tee_context *ctx, u32 cancel_id, u32 session)
+ 	msg_arg->cmd = OPTEE_MSG_CMD_CANCEL;
+ 	msg_arg->session = session;
+ 	msg_arg->cancel_id = cancel_id;
++	trace_optee_cancel_req_entry(msg_arg);
+ 	optee_do_call_with_arg(ctx, msg_parg);
++	trace_optee_cancel_req_exit(msg_arg);
+ 
+ 	tee_shm_free(shm);
+ 	return 0;
+@@ -650,9 +660,11 @@ int optee_shm_register(struct tee_context *ctx, struct tee_shm *shm,
+ 	msg_arg->params->u.tmem.buf_ptr = virt_to_phys(pages_list) |
+ 	  (tee_shm_get_page_offset(shm) & (OPTEE_MSG_NONCONTIG_PAGE_SIZE - 1));
+ 
++	trace_optee_shm_register_entry(msg_arg);
+ 	if (optee_do_call_with_arg(ctx, msg_parg) ||
+ 	    msg_arg->ret != TEEC_SUCCESS)
+ 		rc = -EINVAL;
++	trace_optee_shm_register_exit(msg_arg);
+ 
+ 	tee_shm_free(shm_arg);
+ out:
+@@ -676,9 +688,11 @@ int optee_shm_unregister(struct tee_context *ctx, struct tee_shm *shm)
+ 	msg_arg->params[0].attr = OPTEE_MSG_ATTR_TYPE_RMEM_INPUT;
+ 	msg_arg->params[0].u.rmem.shm_ref = (unsigned long)shm;
+ 
++	trace_optee_shm_unregister_entry(msg_arg);
+ 	if (optee_do_call_with_arg(ctx, msg_parg) ||
+ 	    msg_arg->ret != TEEC_SUCCESS)
+ 		rc = -EINVAL;
++	trace_optee_shm_unregister_exit(msg_arg);
+ 	tee_shm_free(shm_arg);
+ 	return rc;
+ }
+diff --git a/drivers/tee/optee/core.c b/drivers/tee/optee/core.c
+index 6ea80add7..b4a7d5723 100644
+--- a/drivers/tee/optee/core.c
++++ b/drivers/tee/optee/core.c
+@@ -23,6 +23,24 @@
+ #include "optee_smc.h"
+ #include "shm_pool.h"
+ 
++#define CREATE_TRACE_POINTS
++#include <trace/events/optee.h>
++
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_open_session_entry);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_open_session_exit);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_close_session_entry);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_close_session_exit);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_invoke_func_entry);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_invoke_func_exit);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_cancel_req_entry);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_cancel_req_exit);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_release_entry);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_release_exit);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_shm_register_entry);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_shm_register_exit);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_shm_unregister_entry);
++EXPORT_TRACEPOINT_SYMBOL_GPL(optee_shm_unregister_exit);
++
+ #define DRIVER_NAME "optee"
+ 
+ #define OPTEE_SHM_NUM_PRIV_PAGES	CONFIG_OPTEE_SHM_NUM_PRIV_PAGES
+@@ -300,7 +318,9 @@ static void optee_release(struct tee_context *ctx)
+ 			memset(arg, 0, sizeof(*arg));
+ 			arg->cmd = OPTEE_MSG_CMD_CLOSE_SESSION;
+ 			arg->session = sess->session_id;
++			trace_optee_release_entry(arg);
+ 			optee_do_call_with_arg(ctx, parg);
++			trace_optee_release_exit(arg);
+ 		}
+ 		kfree(sess);
+ 	}
+@@ -750,7 +770,11 @@ static int optee_probe(struct platform_device *pdev)
+ 		return rc;
+ 	}
+ 
++	if (IS_ENABLED(CONFIG_OPTEE_MEM_API))
++		tee_mem_api_init();
++
+ 	pr_info("initialized driver\n");
++
+ 	return 0;
+ err:
+ 	if (optee) {
+@@ -774,6 +798,7 @@ static const struct of_device_id optee_dt_match[] = {
+ 	{ .compatible = "linaro,optee-tz" },
+ 	{},
+ };
++
+ MODULE_DEVICE_TABLE(of, optee_dt_match);
+ 
+ static struct platform_driver optee_driver = {
+@@ -785,7 +810,12 @@ static struct platform_driver optee_driver = {
+ 		.of_match_table = optee_dt_match,
+ 	},
+ };
+-module_platform_driver(optee_driver);
++
++static int __init optee_init(void)
++{
++	return platform_driver_register(&optee_driver);
++}
++subsys_initcall(optee_init);
+ 
+ MODULE_AUTHOR("Linaro");
+ MODULE_DESCRIPTION("OP-TEE driver");
+diff --git a/drivers/tee/optee/optee_private.h b/drivers/tee/optee/optee_private.h
+index ea09533e3..310ba45bc 100644
+--- a/drivers/tee/optee/optee_private.h
++++ b/drivers/tee/optee/optee_private.h
+@@ -203,4 +203,7 @@ static inline void reg_pair_from_64(u32 *reg0, u32 *reg1, u64 val)
+ 	*reg1 = val;
+ }
+ 
++extern int tee_mem_api_init(void);
++extern void tee_mem_api_exit(void);
++
+ #endif /*OPTEE_PRIVATE_H*/
+diff --git a/drivers/tee/tee_core.c b/drivers/tee/tee_core.c
+index e07f997cf..a9ec0a0bd 100644
+--- a/drivers/tee/tee_core.c
++++ b/drivers/tee/tee_core.c
+@@ -42,6 +42,7 @@ static DEFINE_SPINLOCK(driver_lock);
+ 
+ static struct class *tee_class;
+ static dev_t tee_devt;
++static u64 dma_mask;//for DMA operation
+ 
+ struct tee_context *teedev_open(struct tee_device *teedev)
+ {
+@@ -356,6 +357,42 @@ tee_ioctl_shm_register(struct tee_context *ctx,
+ 	return ret;
+ }
+ 
++static int tee_ioctl_shm_register_fd(struct tee_context *ctx,
++			struct tee_ioctl_shm_register_fd_data __user *udata)
++{
++	struct tee_ioctl_shm_register_fd_data data;
++	struct tee_shm *shm;
++	long ret;
++
++	if (copy_from_user(&data, udata, sizeof(data)))
++		return -EFAULT;
++
++	/* Currently no input flags are supported */
++	if (data.flags)
++		return -EINVAL;
++
++	shm = tee_shm_register_fd(ctx, data.fd);
++	if (IS_ERR_OR_NULL(shm))
++		return -EINVAL;
++
++	data.id = shm->id;
++	data.flags = shm->flags;
++	data.size = shm->size;
++
++	if (copy_to_user(udata, &data, sizeof(data)))
++		ret = -EFAULT;
++	else
++		ret = tee_shm_get_fd(shm);
++
++	/*
++	 * When user space closes the file descriptor the shared memory
++	 * should be freed or if tee_shm_get_fd() failed then it will
++	 * be freed immediately.
++	 */
++	tee_shm_put(shm);
++	return ret;
++}
++
+ static int params_from_user(struct tee_context *ctx, struct tee_param *params,
+ 			    size_t num_params,
+ 			    struct tee_ioctl_param __user *uparams)
+@@ -829,6 +866,8 @@ static long tee_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+ 		return tee_ioctl_shm_alloc(ctx, uarg);
+ 	case TEE_IOC_SHM_REGISTER:
+ 		return tee_ioctl_shm_register(ctx, uarg);
++	case TEE_IOC_SHM_REGISTER_FD:
++		return tee_ioctl_shm_register_fd(ctx, uarg);
+ 	case TEE_IOC_OPEN_SESSION:
+ 		return tee_ioctl_open_session(ctx, uarg);
+ 	case TEE_IOC_INVOKE:
+@@ -924,6 +963,9 @@ struct tee_device *tee_device_alloc(const struct tee_desc *teedesc,
+ 	teedev->dev.class = tee_class;
+ 	teedev->dev.release = tee_release_device;
+ 	teedev->dev.parent = dev;
++	//for DMA operation
++	dma_mask = 0xffffffff;
++	teedev->dev.dma_mask = &dma_mask;
+ 
+ 	teedev->dev.devt = MKDEV(MAJOR(tee_devt), teedev->id);
+ 
+diff --git a/drivers/tee/tee_shm.c b/drivers/tee/tee_shm.c
+index 499fccba3..fc582b606 100644
+--- a/drivers/tee/tee_shm.c
++++ b/drivers/tee/tee_shm.c
+@@ -10,6 +10,8 @@
+ #include <linux/slab.h>
+ #include <linux/tee_drv.h>
+ #include <linux/uio.h>
++#include <linux/dma-buf.h>
++
+ #include "tee_private.h"
+ 
+ static void release_registered_pages(struct tee_shm *shm)
+@@ -28,6 +30,13 @@ static void release_registered_pages(struct tee_shm *shm)
+ 	}
+ }
+ 
++struct tee_shm_dmabuf_ref {
++	struct tee_shm shm;
++	struct dma_buf *dmabuf;
++	struct dma_buf_attachment *attach;
++	struct sg_table *sgt;
++};
++
+ static void tee_shm_release(struct tee_device *teedev, struct tee_shm *shm)
+ {
+ 	if (shm->flags & TEE_SHM_POOL) {
+@@ -47,9 +56,18 @@ static void tee_shm_release(struct tee_device *teedev, struct tee_shm *shm)
+ 				"unregister shm %p failed: %d", shm, rc);
+ 
+ 		release_registered_pages(shm);
++	} else if (shm->flags & TEE_SHM_EXT_DMA_BUF) {
++		struct tee_shm_dmabuf_ref *ref;
++
++		ref = container_of(shm, struct tee_shm_dmabuf_ref, shm);
++		dma_buf_unmap_attachment(ref->attach, ref->sgt,
++					 DMA_BIDIRECTIONAL);
++		dma_buf_detach(ref->dmabuf, ref->attach);
++		dma_buf_put(ref->dmabuf);
+ 	}
+ 
+-	teedev_ctx_put(shm->ctx);
++	if (shm->ctx)
++		teedev_ctx_put(shm->ctx);
+ 
+ 	kfree(shm);
+ 
+@@ -92,6 +110,7 @@ struct tee_shm *tee_shm_alloc(struct tee_context *ctx, size_t size, u32 flags)
+ 
+ 	refcount_set(&shm->refcount, 1);
+ 	shm->flags = flags | TEE_SHM_POOL;
++	shm->teedev = teedev;
+ 	shm->ctx = ctx;
+ 	if (flags & TEE_SHM_DMA_BUF)
+ 		poolm = teedev->pool->dma_buf_mgr;
+@@ -179,6 +198,7 @@ struct tee_shm *tee_shm_register(struct tee_context *ctx, unsigned long addr,
+ 
+ 	refcount_set(&shm->refcount, 1);
+ 	shm->flags = flags | TEE_SHM_REGISTER;
++	shm->teedev = teedev;
+ 	shm->ctx = ctx;
+ 	shm->id = -1;
+ 	addr = untagged_addr(addr);
+@@ -255,6 +275,87 @@ struct tee_shm *tee_shm_register(struct tee_context *ctx, unsigned long addr,
+ }
+ EXPORT_SYMBOL_GPL(tee_shm_register);
+ 
++struct tee_shm *tee_shm_register_fd(struct tee_context *ctx, int fd)
++{
++	struct tee_shm_dmabuf_ref *ref;
++	void *rc;
++
++	if (!tee_device_get(ctx->teedev))
++		return ERR_PTR(-EINVAL);
++
++	teedev_ctx_get(ctx);
++
++	ref = kzalloc(sizeof(*ref), GFP_KERNEL);
++	if (!ref) {
++		rc = ERR_PTR(-ENOMEM);
++		goto err;
++	}
++
++	refcount_set(&ref->shm.refcount, 1);
++	ref->shm.ctx = ctx;
++	ref->shm.teedev = ctx->teedev;
++	ref->shm.id = -1;
++
++	ref->dmabuf = dma_buf_get(fd);
++	if (!ref->dmabuf) {
++		rc = ERR_PTR(-EINVAL);
++		goto err;
++	}
++
++	ref->attach = dma_buf_attach(ref->dmabuf, &ref->shm.teedev->dev);
++	if (IS_ERR_OR_NULL(ref->attach)) {
++		rc = ERR_PTR(-EINVAL);
++		goto err;
++	}
++
++	ref->sgt = dma_buf_map_attachment(ref->attach, DMA_BIDIRECTIONAL);
++	if (IS_ERR_OR_NULL(ref->sgt)) {
++		rc = ERR_PTR(-EINVAL);
++		goto err;
++	}
++
++	if (sg_nents(ref->sgt->sgl) != 1) {
++		rc = ERR_PTR(-EINVAL);
++		goto err;
++	}
++
++	ref->shm.paddr = sg_dma_address(ref->sgt->sgl);
++	ref->shm.size = sg_dma_len(ref->sgt->sgl);
++	ref->shm.flags = TEE_SHM_DMA_BUF | TEE_SHM_EXT_DMA_BUF;
++
++	mutex_lock(&ref->shm.teedev->mutex);
++	ref->shm.id = idr_alloc(&ref->shm.teedev->idr, &ref->shm,
++				1, 0, GFP_KERNEL);
++	mutex_unlock(&ref->shm.teedev->mutex);
++	if (ref->shm.id < 0) {
++		rc = ERR_PTR(ref->shm.id);
++		goto err;
++	}
++
++	return &ref->shm;
++
++err:
++	if (ref) {
++		if (ref->shm.id >= 0) {
++			mutex_lock(&ctx->teedev->mutex);
++			idr_remove(&ctx->teedev->idr, ref->shm.id);
++			mutex_unlock(&ctx->teedev->mutex);
++		}
++		if (ref->sgt)
++			dma_buf_unmap_attachment(ref->attach, ref->sgt,
++						 DMA_BIDIRECTIONAL);
++		if (ref->attach)
++			dma_buf_detach(ref->dmabuf, ref->attach);
++		if (ref->dmabuf)
++			dma_buf_put(ref->dmabuf);
++	}
++	kfree(ref);
++	teedev_ctx_put(ctx);
++	tee_device_put(ctx->teedev);
++	return rc;
++}
++EXPORT_SYMBOL_GPL(tee_shm_register_fd);
++
+ static int tee_shm_fop_release(struct inode *inode, struct file *filp)
+ {
+ 	tee_shm_put(filp->private_data);
+@@ -391,8 +492,10 @@ EXPORT_SYMBOL_GPL(tee_shm_get_va);
+  */
+ int tee_shm_get_pa(struct tee_shm *shm, size_t offs, phys_addr_t *pa)
+ {
++#if 0	//optee: remove registered shm argument size check
+ 	if (offs >= shm->size)
+ 		return -EINVAL;
++#endif
+ 	if (pa)
+ 		*pa = shm->paddr + offs;
+ 	return 0;
+-- 
+2.17.1
+

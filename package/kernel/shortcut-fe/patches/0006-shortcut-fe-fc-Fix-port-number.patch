@@ -1,0 +1,86 @@
+Index: shortcut-fe-2021-03-17-697977d8/fast-classifier/fast-classifier.c
+===================================================================
+--- shortcut-fe-2021-03-17-697977d8.orig/fast-classifier/fast-classifier.c
++++ shortcut-fe-2021-03-17-697977d8/fast-classifier/fast-classifier.c
+@@ -595,7 +595,7 @@ static void fast_classifier_send_genl_ms
+ 		DEBUG_TRACE("sip=%pI6 dip=%pI6 ", &fc_msg->src_saddr, &fc_msg->dst_saddr);
+ 	}
+ 	DEBUG_TRACE("protocol=%d sport=%d dport=%d smac=%pM dmac=%pM\n",
+-		    fc_msg->proto, fc_msg->sport, fc_msg->dport, fc_msg->smac, fc_msg->dmac);
++		    fc_msg->proto, ntohs(fc_msg->sport), ntohs(fc_msg->dport), fc_msg->smac, fc_msg->dmac);
+ }
+ 
+ /*
+@@ -728,10 +728,10 @@ fast_classifier_add_conn(struct sfe_conn
+ 
+ 	if (conn->is_v4) {
+ 		DEBUG_TRACE("new offloadable: key: %u proto: %d src_ip: %pI4 dst_ip: %pI4, src_port: %d, dst_port: %d\n",
+-				key, sic->protocol, &(sic->src_ip), &(sic->dest_ip), sic->src_port, sic->dest_port);
++				key, sic->protocol, &(sic->src_ip), &(sic->dest_ip), ntohs(sic->src_port), ntohs(sic->dest_port));
+ 	} else {
+ 		DEBUG_TRACE("new offloadable: key: %u proto: %d src_ip: %pI6 dst_ip: %pI6, src_port: %d, dst_port: %d\n",
+-				key, sic->protocol, &(sic->src_ip), &(sic->dest_ip), sic->src_port, sic->dest_port);
++				key, sic->protocol, &(sic->src_ip), &(sic->dest_ip), ntohs(sic->src_port), ntohs(sic->dest_port));
+ 	}
+ 
+ 	return conn;
+@@ -757,8 +757,8 @@ fast_classifier_offload_genl_msg(struct
+ 			    fc_msg->proto,
+ 			    &fc_msg->src_saddr,
+ 			    &fc_msg->dst_saddr,
+-			    fc_msg->sport,
+-			    fc_msg->dport,
++			    ntohs(fc_msg->sport),
++			    ntohs(fc_msg->dport),
+ 			    fc_msg->smac,
+ 			    fc_msg->dmac);
+ 	} else {
+@@ -767,8 +767,8 @@ fast_classifier_offload_genl_msg(struct
+ 			    fc_msg->proto,
+ 			    &fc_msg->src_saddr,
+ 			    &fc_msg->dst_saddr,
+-			    fc_msg->sport,
+-			    fc_msg->dport,
++			    ntohs(fc_msg->sport),
++			    ntohs(fc_msg->dport),
+ 			    fc_msg->smac,
+ 			    fc_msg->dmac);
+ 	}
+@@ -1030,10 +1030,10 @@ static unsigned int fast_classifier_post
+ 
+ 	if (is_v4) {
+ 		DEBUG_TRACE("POST_ROUTE: checking new connection: %d src_ip: %pI4 dst_ip: %pI4, src_port: %d, dst_port: %d\n",
+-			    sic.protocol, &sic.src_ip, &sic.dest_ip, sic.src_port, sic.dest_port);
++			    sic.protocol, &sic.src_ip, &sic.dest_ip, ntohs(sic.src_port), ntohs(sic.dest_port));
+ 	} else {
+ 		DEBUG_TRACE("POST_ROUTE: checking new connection: %d src_ip: %pI6 dst_ip: %pI6, src_port: %d, dst_port: %d\n",
+-			    sic.protocol, &sic.src_ip, &sic.dest_ip, sic.src_port, sic.dest_port);
++			    sic.protocol, &sic.src_ip, &sic.dest_ip, ntohs(sic.src_port), ntohs(sic.dest_port));
+ 	}
+ 
+ 	/*
+@@ -1354,10 +1354,10 @@ static int fast_classifier_conntrack_eve
+ 
+ 	if (is_v4) {
+ 		DEBUG_TRACE("Try to clean up: proto: %d src_ip: %pI4 dst_ip: %pI4, src_port: %d, dst_port: %d\n",
+-			    sid.protocol, &sid.src_ip, &sid.dest_ip, sid.src_port, sid.dest_port);
++			    sid.protocol, &sid.src_ip, &sid.dest_ip, ntohs(sid.src_port), ntohs(sid.dest_port));
+ 	} else {
+ 		DEBUG_TRACE("Try to clean up: proto: %d src_ip: %pI6 dst_ip: %pI6, src_port: %d, dst_port: %d\n",
+-			    sid.protocol, &sid.src_ip, &sid.dest_ip, sid.src_port, sid.dest_port);
++			    sid.protocol, &sid.src_ip, &sid.dest_ip, ntohs(sid.src_port), ntohs(sid.dest_port));
+ 	}
+ 
+ 	spin_lock_bh(&sfe_connections_lock);
+@@ -1667,9 +1667,9 @@ static ssize_t fast_classifier_get_debug
+ 				conn->sic->protocol,
+ 				conn->sic->src_mac,
+ 				&conn->sic->src_ip,
+-				conn->sic->src_port,
++				ntohs(conn->sic->src_port),
+ 				&conn->sic->dest_ip,
+-				conn->sic->dest_port,
++				ntohs(conn->sic->dest_port),
+ 				conn->sic->dest_mac_xlate,
+ 				conn->sic->mark,
+ 				conn->hits);

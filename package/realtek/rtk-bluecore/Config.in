@@ -1,0 +1,10 @@
+menu "rtk-bluecore Configuration"
+	depends on PACKAGE_rtk-bluecore
+
+config UPDATE_AUDIO_FW
+	bool "Update audio FW"
+	default n
+	help
+	  Sync to latest build from rtk-dl.
+
+endmenu

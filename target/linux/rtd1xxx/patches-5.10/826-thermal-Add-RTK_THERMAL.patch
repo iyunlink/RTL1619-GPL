@@ -1,0 +1,33 @@
+From 6a33928d349768cffb3379162b52b17bbe2025db Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:38:52 +0800
+Subject: [PATCH 45/54] 826: thermal: Add RTK_THERMAL
+
+---
+ drivers/thermal/Kconfig  | 1 +
+ drivers/thermal/Makefile | 2 ++
+ 2 files changed, 3 insertions(+)
+
+diff --git a/drivers/thermal/Kconfig b/drivers/thermal/Kconfig
+index 7edc8dc6b..c9efb5fd0 100644
+--- a/drivers/thermal/Kconfig
++++ b/drivers/thermal/Kconfig
+@@ -510,4 +510,5 @@ config KHADAS_MCU_FAN_THERMAL
+ 	  If you say yes here you get support for the FAN controlled
+ 	  by the Microcontroller found on the Khadas VIM boards.
+ 
++source "drivers/thermal/realtek/Kconfig"
+ endif
+diff --git a/drivers/thermal/Makefile b/drivers/thermal/Makefile
+index b64dd50a6..41c010924 100644
+--- a/drivers/thermal/Makefile
++++ b/drivers/thermal/Makefile
+@@ -62,3 +62,5 @@ obj-$(CONFIG_UNIPHIER_THERMAL)	+= uniphier_thermal.o
+ obj-$(CONFIG_AMLOGIC_THERMAL)     += amlogic_thermal.o
+ obj-$(CONFIG_SPRD_THERMAL)	+= sprd_thermal.o
+ obj-$(CONFIG_KHADAS_MCU_FAN_THERMAL)	+= khadas_mcu_fan.o
++obj-$(CONFIG_RTK_THERMAL)	+= realtek/
++
+-- 
+2.17.1
+

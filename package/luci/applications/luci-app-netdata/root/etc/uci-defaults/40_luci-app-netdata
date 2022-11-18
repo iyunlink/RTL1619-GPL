@@ -1,0 +1,7 @@
+#!/bin/sh
+
+[ -d /usr/share/netdata/zh_Hant ] && cp -f /usr/share/netdata/zh_Hant/* /usr/share/netdata/web/
+
+rm -rf /tmp/luci-modulecache /tmp/luci-indexcache*
+
+exit 0

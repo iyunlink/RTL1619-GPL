@@ -1,0 +1,182 @@
+From bf0ac63831bc5d983f5739b09951da978050db0c Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:16:07 +0800
+Subject: [PATCH 27/54] 808: irqchip: Add irq-realtek-mux and update gic-v3
+
+---
+ drivers/irqchip/Kconfig      |  6 +++
+ drivers/irqchip/Makefile     |  1 +
+ drivers/irqchip/irq-gic-v3.c | 71 ++++++++++++++++++++++++++++++++++--
+ 3 files changed, 74 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/irqchip/Kconfig b/drivers/irqchip/Kconfig
+index dc062e8c2..8ddc39f68 100644
+--- a/drivers/irqchip/Kconfig
++++ b/drivers/irqchip/Kconfig
+@@ -333,6 +333,12 @@ config INGENIC_TCU_IRQ
+ 
+ 	  If unsure, say N.
+ 
++config REALTEK_DHC_INTC
++	tristate "Realtek DHC SoC family interrupt controller"
++	depends on ARCH_REALTEK
++	default ARCH_REALTEK
++	select IRQ_DOMAIN
++
+ config RENESAS_H8300H_INTC
+         bool
+ 	select IRQ_DOMAIN
+diff --git a/drivers/irqchip/Makefile b/drivers/irqchip/Makefile
+index 94c288588..147353f56 100644
+--- a/drivers/irqchip/Makefile
++++ b/drivers/irqchip/Makefile
+@@ -48,6 +48,7 @@ obj-$(CONFIG_IXP4XX_IRQ)		+= irq-ixp4xx.o
+ obj-$(CONFIG_SIRF_IRQ)			+= irq-sirfsoc.o
+ obj-$(CONFIG_JCORE_AIC)			+= irq-jcore-aic.o
+ obj-$(CONFIG_RDA_INTC)			+= irq-rda-intc.o
++obj-$(CONFIG_REALTEK_DHC_INTC)		+= irq-realtek-mux.o
+ obj-$(CONFIG_RENESAS_INTC_IRQPIN)	+= irq-renesas-intc-irqpin.o
+ obj-$(CONFIG_RENESAS_IRQC)		+= irq-renesas-irqc.o
+ obj-$(CONFIG_RENESAS_RZA1_IRQC)		+= irq-renesas-rza1.o
+diff --git a/drivers/irqchip/irq-gic-v3.c b/drivers/irqchip/irq-gic-v3.c
+index 04d1b3963..fa3df1ae8 100644
+--- a/drivers/irqchip/irq-gic-v3.c
++++ b/drivers/irqchip/irq-gic-v3.c
+@@ -31,6 +31,8 @@
+ 
+ #include "irq-gic-common.h"
+ 
++#define GICD_CTLR_E1NWF	(1 << 7)
++
+ #define GICD_INT_NMI_PRI	(GICD_INT_DEF_PRI & ~0x80)
+ 
+ #define FLAGS_WORKAROUND_GICR_WAKER_MSM8996	(1ULL << 0)
+@@ -38,6 +40,12 @@
+ 
+ #define GIC_IRQ_TYPE_PARTITION	(GIC_IRQ_TYPE_LPI + 1)
+ 
++static unsigned int GICR_ISENABLER0_REG;
++static unsigned int GIC_ISENABLER0_REG;
++static unsigned int GIC_ISENABLER1_REG;
++static unsigned int GIC_ISENABLER2_REG;
++static unsigned int GIC_ISENABLER3_REG;
++
+ struct redist_region {
+ 	void __iomem		*redist_base;
+ 	phys_addr_t		phys_base;
+@@ -256,10 +264,14 @@ static void gic_enable_redist(bool enable)
+ 	rbase = gic_data_rdist_rd_base();
+ 
+ 	val = readl_relaxed(rbase + GICR_WAKER);
+-	if (enable)
++	if (enable) {
++
++		if (readl_relaxed(rbase) & 0x02000000)
++			writel_relaxed(readl_relaxed(rbase) & 0xfdffffff, rbase);
++
+ 		/* Wake up this CPU redistributor */
+ 		val &= ~GICR_WAKER_ProcessorSleep;
+-	else
++	} else
+ 		val |= GICR_WAKER_ProcessorSleep;
+ 	writel_relaxed(val, rbase + GICR_WAKER);
+ 
+@@ -812,13 +824,22 @@ static void __init gic_dist_init(void)
+ 	}
+ 
+ 	/* Enable distributor with ARE, Group1 */
+-	writel_relaxed(val, base + GICD_CTLR);
++
++	writel_relaxed(GICD_CTLR_E1NWF | GICD_CTLR_ARE_NS | GICD_CTLR_ENABLE_G1A | GICD_CTLR_ENABLE_G1,
++		       base + GICD_CTLR);
+ 
+ 	/*
+ 	 * Set all global interrupts to the boot CPU only. ARE must be
+ 	 * enabled.
+ 	 */
+ 	affinity = gic_mpidr_to_affinity(cpu_logical_map(smp_processor_id()));
++
++	/*
++	* The GIC selects the appropriate core for a SPI.
++	* GICD_IROUTER<n>.Interrupt_Routing_Mode = 1
++	*/
++	affinity |= 0x80000000;
++
+ 	for (i = 32; i < GIC_LINE_NR; i++)
+ 		gic_write_irouter(affinity, base + GICD_IROUTER + i * 8);
+ 
+@@ -1149,6 +1170,17 @@ static int gic_starting_cpu(unsigned int cpu)
+ 	return 0;
+ }
+ 
++static int gic_off_cpu(unsigned int cpu)
++{
++
++	void __iomem *rbase;
++
++	rbase = gic_data_rdist_rd_base();
++	writel_relaxed(readl_relaxed(rbase) | 0x2000000, rbase);
++
++	return 0;
++}
++
+ static u16 gic_compute_target_list(int *base_cpu, const struct cpumask *mask,
+ 				   unsigned long cluster_id)
+ {
+@@ -1230,7 +1262,7 @@ static void __init gic_smp_init(void)
+ 
+ 	cpuhp_setup_state_nocalls(CPUHP_AP_IRQ_GIC_STARTING,
+ 				  "irqchip/arm/gicv3:starting",
+-				  gic_starting_cpu, NULL);
++				  gic_starting_cpu, gic_off_cpu);
+ 
+ 	/* Register all 8 non-secure SGIs */
+ 	base_sgi = __irq_domain_alloc_irqs(gic_data.domain, -1, 8,
+@@ -1271,6 +1303,9 @@ static int gic_set_affinity(struct irq_data *d, const struct cpumask *mask_val,
+ 	reg = gic_dist_base(d) + offset + (index * 8);
+ 	val = gic_mpidr_to_affinity(cpu_logical_map(cpu));
+ 
++	if (cpumask_subset(cpu_online_mask, mask_val))
++		val |= 0x80000000;
++
+ 	gic_write_irouter(val, reg);
+ 
+ 	/*
+@@ -1301,6 +1336,34 @@ static int gic_retrigger(struct irq_data *data)
+ static int gic_cpu_pm_notifier(struct notifier_block *self,
+ 			       unsigned long cmd, void *v)
+ {
++	void __iomem *rbase;
++
++	rbase = gic_data_rdist_sgi_base();
++	if (cmd == CPU_PM_EXIT) {
++		pr_err("GICR_ISENABLER0 = %x\n", GICR_ISENABLER0_REG);
++		pr_err("GIC_ISENABLER0 = %x\n", GIC_ISENABLER0_REG);
++		pr_err("GIC_ISENABLER1 = %x\n", GIC_ISENABLER1_REG);
++		pr_err("GIC_ISENABLER2 = %x\n", GIC_ISENABLER2_REG);
++		pr_err("GIC_ISENABLER3 = %x\n", GIC_ISENABLER3_REG);
++		writel_relaxed(GICR_ISENABLER0_REG, rbase + GICR_ISENABLER0);
++		writel_relaxed(GIC_ISENABLER0_REG, gic_data.dist_base + 0x100);
++		writel_relaxed(GIC_ISENABLER1_REG, gic_data.dist_base + 0x104);
++		writel_relaxed(GIC_ISENABLER2_REG, gic_data.dist_base + 0x108);
++		writel_relaxed(GIC_ISENABLER3_REG, gic_data.dist_base + 0x10C);
++
++	} else if (cmd == CPU_PM_ENTER) {
++		GICR_ISENABLER0_REG = readl_relaxed(rbase + GICR_ISENABLER0);
++		GIC_ISENABLER0_REG = readl_relaxed(gic_data.dist_base + 0x100);
++		GIC_ISENABLER1_REG = readl_relaxed(gic_data.dist_base + 0x104);
++		GIC_ISENABLER2_REG = readl_relaxed(gic_data.dist_base + 0x108);
++		GIC_ISENABLER3_REG = readl_relaxed(gic_data.dist_base + 0x10C);
++		pr_err("GICR_ISENABLER0 = %x\n", GICR_ISENABLER0_REG);
++		pr_err("GIC_ISENABLER0 = %x\n", GIC_ISENABLER0_REG);
++		pr_err("GIC_ISENABLER1 = %x\n", GIC_ISENABLER1_REG);
++		pr_err("GIC_ISENABLER2 = %x\n", GIC_ISENABLER2_REG);
++		pr_err("GIC_ISENABLER3 = %x\n", GIC_ISENABLER3_REG);
++	}
++
+ 	if (cmd == CPU_PM_EXIT) {
+ 		if (gic_dist_security_disabled())
+ 			gic_enable_redist(true);
+-- 
+2.17.1
+

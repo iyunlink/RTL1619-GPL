@@ -1,0 +1,153 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2020 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd1619b-bleedingedge.dtsi"
+
+/ {
+	compatible = "realtek,bleeding-edge-spi-purenas", "realtek,rtd1619b";
+	model = "Realtek Bleeding Edge EVB SPI (2GB) Pure NAS";
+
+	memory@40000 {
+		device_type = "memory";
+		reg = <0x00040000 0x7ffc0000>; /* 2 GiB */
+	};
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,460800 uio_pdrv_genirq.of_id=generic-uio init=/sbin/init root=/dev/mtdblock3 rootwait loglevel=8 mtdparts=RtkSFC:256k(u-boot-env),1280k(u-boot)ro,4736k(firmware),9600k(rootfs) NO_RESERVE";
+	};
+};
+
+&sfc {
+	status = "okay";
+};
+
+&cpu0 {
+	clocks = <&cc RTD1619B_CRT_PLL_SCPU>;
+};
+
+&cpu1 {
+	clocks = <&cc RTD1619B_CRT_PLL_SCPU>;
+};
+
+&cpu2 {
+	clocks = <&cc RTD1619B_CRT_PLL_SCPU>;
+};
+
+&cpu3 {
+	clocks = <&cc RTD1619B_CRT_PLL_SCPU>;
+};
+
+&pcie1 {
+	status = "disabled";
+};
+
+&sata_phy {
+	status = "okay";
+};
+
+&sata_phy0 {
+	status = "okay";
+};
+
+&ahci_sata {
+	status = "okay";
+};
+
+&sata_port0 {
+        status = "okay";
+};
+
+&protected_mem {
+	status = "disabled";
+};
+
+&rpc_comm {
+	status = "disabled";
+};
+
+&rpc_ringbuf {
+	status = "disabled";
+};
+
+&video_fw_ve3 {
+	status = "disabled";
+};
+
+&audio_heap {
+	status = "disabled";
+};
+
+&media_heap {
+	status = "disabled";
+};
+
+&cma_resrved_1 {
+	status = "disabled";
+};
+
+&cma_resrved_2 {
+	status = "disabled";
+};
+
+&cma_resrved_3 {
+	status = "disabled";
+};
+
+&cma_resrved_4 {
+	status = "disabled";
+};
+
+&cma_resrved_5 {
+	status = "disabled";
+};
+
+&cma_resrved_6 {
+	status = "disabled";
+};
+
+&cma_resrved_7 {
+	status = "disabled";
+};
+
+&cma_resrved_8 {
+	status = "disabled";
+};
+
+&cma_resrved_9 {
+	status = "disabled";
+};
+
+&rtk_ion {
+	status = "disabled";
+
+};
+
+&tee {
+	status = "disabled";
+};
+
+&hifi {
+	status = "disabled";
+};
+
+&rpc {
+	status = "disabled";
+};
+
+&rtk_fw_pm {
+	status = "disabled";
+};
+
+&reserved_memory {
+       ramoops@22000000  {
+               compatible = "ramoops";
+               reg = <0x22000000 0x00200000>;
+               console-size = <0x00100000>;
+               record-size = <0x00004000>;
+               ftrace-size = <0x00004000>;
+       };
+};

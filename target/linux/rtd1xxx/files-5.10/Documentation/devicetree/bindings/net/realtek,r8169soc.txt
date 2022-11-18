@@ -1,0 +1,57 @@
+Realtek r8169soc Ethernet driver
+
+Required properties:
+- compatible: should be one of below strings
+  "realtek,rtd119x-r8169soc" for Phoenix (RTD1195) SoC
+  "realtek,rtd129x-r8169soc" for Kylin (RTD1293, RTD1295, RTD1296) SoC
+  "realtek,rtd139x-r8169soc" for Hercules (RTD1395) SoC
+  "realtek,rtd16xx-r8169soc" for Thor (RTD1619) SoC
+  "realtek,rtd13xx-r8169soc" for Hank (RTD1319) SoC
+  "realtek,rtd16xxb-r8169soc" for Stark (RTD1619B) SoC
+  "realtek,rtd13xxd-r8169soc" for Parker (RTD1319D) SoC
+- reg: Address and length of the register set for the device
+- interrupts:  Should contain the MAC interrupts
+- pinctrl-names: names of pinmux set of corresponding output mode
+- pinctrl-0: the default pinmux set
+- local-mac-address: See ethernet-controller.yaml in the same directory.
+  This property is overwrited by bootloader.
+- output-mode: 0:embedded PHY (default),
+  1:RGMII to MAC (valid for RTD1295, and RTD1319),
+  2:RGMII to PHY (valid for RTD1319),
+  3:SGMII to MAC (valid for RTD1395, and RTD1619),
+  4:SGMII to PHY (valid for RTD1395, and RTD1619),
+  5:RMII (valid for RTD1319),
+  6:forced link (valid for RTD1319)
+- acp: support ACP (Accelerator Coherence Port) or not
+- eee: support EEE (Energy-Efficient Ethernet) or not
+- clocks: Must contain a handle for each entry in clock-names.
+- clock-names: The name of the clock listed in the clocks property.
+- resets: Must contain a handle for each entry in reset-names.
+- reset-names: The name of the reset listed in the resets property.
+
+Optional properties:
+- bypass: valid for RTD1395
+  1: ETN MAC bypasses efuse update flow. SW needs to take this sequence.
+  0: ETN MAC sets efuse update and efuse_rdy setting
+- wol-enable: enable WoL or not
+  BIT 0: WoL enable
+  BIT 1: CRC match (up to 16 match patterns)
+  BIT 2: WPD (Wake Packet Detection)
+- led-cfg: customized LED setting
+- pinctrl-1: the extra pinmux set of of corresponding output mode
+- ext-phy-id: 0 ~ 31, only valid when output-mode = "SGMII to PHY"
+- sgmii-swing: 0:640mV, 1:380mV, 2:250mV, 3:190mV,
+  only valid when output-mode = "SGMII to MAC" or "SGMII to PHY"
+- voltage: 1:1.8V, 2:2.5V, 3: 3.3V;
+  only valid when output-mode = "RGMII to MAC", "RGMII to PHY", or "RMII"
+- tx-delay: 0:0ns, 1:2ns;
+  only valid when output-mode = "RGMII to MAC", "RGMII to PHY", or "RMII"
+- rx-delay: 0:0ns, 1:2ns;
+  only valid when output-mode = "RGMII to MAC", "RGMII to PHY", or "RMII"
+- force-Gb-off: disable gigabit feature if defined
+- wake-mask[0-15]: pattern mask of a packet (for WoL via CRC match)
+- wake-crc[0-15]: CRC value of a masked packet (for WoL via CRC match)
+- wake-mask[0-31]: pattern mask of a packet (for WoL via exactly pattern match)
+- wake-crc[0-31]: CRC value of a masked packet (for WoL via exactly pattern match)
+- wake-pattern[0-31]: pattern content for corresponding masked bytes (for WoL via exactly pattern match)
+- wake-offset[0-31]: start offset of pattern (for WoL via exactly pattern match)

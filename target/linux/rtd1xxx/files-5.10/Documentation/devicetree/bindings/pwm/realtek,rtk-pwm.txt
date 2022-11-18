@@ -1,0 +1,19 @@
+Realtek PWM controller
+
+This PWM controller provides 4 PWM outputs as sub-nodes and each one can be
+enabled individually.
+Required properties:
+- compatible: should be one of below strings
+  "realtek,rtk-pwm" for PWM V1 mode (rtd129x, rtd139x, rtd16xx, rtd13xx, rtd16xxb)
+  "realtek,rtk-pwm-v2" for PWM V2 mode (rtd1312c)
+- #pwm-cells: should be 2. See pwm.yaml in this directory for a description
+  of the cells format
+- reg: physical base address and length for this controller
+
+Required properties of each sub-node:
+- enable: turn on/off this PWM output
+- clkout_div: PWM output clock divisor.
+- clksrc_div: PWM clock source divisor.
+- duty_rate: crest-to-trough ratio of this PWM output
+
+

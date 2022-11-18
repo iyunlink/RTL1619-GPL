@@ -1,0 +1,149 @@
+diff --git a/fs/ecryptfs/Kconfig b/fs/ecryptfs/Kconfig
+index 1bdeaa6d5..28d3a7390 100644
+--- a/fs/ecryptfs/Kconfig
++++ b/fs/ecryptfs/Kconfig
+@@ -21,3 +21,11 @@ config ECRYPT_FS_MESSAGING
+ 	  Enables the /dev/ecryptfs entry for use by ecryptfsd. This allows
+ 	  for userspace to wrap/unwrap file encryption keys by other
+ 	  backends, like OpenSSL.
++
++config ECRYPT_FS_FAST_INIT
++	bool "eCrypt fast initialization support"
++	depends on ECRYPT_FS
++	default y
++	help
++	  Enable fast init feature to improve performance that disadvantage
++	  of unsupportive sparse file in eCrypt.
+diff --git a/fs/ecryptfs/inode.c b/fs/ecryptfs/inode.c
+index e23752d9a..d0ee2d31c 100644
+--- a/fs/ecryptfs/inode.c
++++ b/fs/ecryptfs/inode.c
+@@ -729,7 +729,11 @@ static int truncate_upper(struct dentry *dentry, struct iattr *ia,
+ 	struct inode *inode = d_inode(dentry);
+ 	struct ecryptfs_crypt_stat *crypt_stat;
+ 	loff_t i_size = i_size_read(inode);
++#ifdef CONFIG_ECRYPT_FS_FAST_INIT
++	size_t num_zeros;
++#else
+ 	loff_t lower_size_before_truncate;
++#endif
+ 	loff_t lower_size_after_truncate;
+ 
+ 	if (unlikely((ia->ia_size == i_size))) {
+@@ -741,6 +745,7 @@ static int truncate_upper(struct dentry *dentry, struct iattr *ia,
+ 		return rc;
+ 	crypt_stat = &ecryptfs_inode_to_private(d_inode(dentry))->crypt_stat;
+ 	/* Switch on growing or shrinking file */
++#ifndef CONFIG_ECRYPT_FS_FAST_INIT
+ 	if (ia->ia_size > i_size) {
+ 		char zero[] = { 0x00 };
+ 
+@@ -758,14 +763,25 @@ static int truncate_upper(struct dentry *dentry, struct iattr *ia,
+ 		 * PAGE_SIZE with zeros. */
+ 		size_t num_zeros = (PAGE_SIZE
+ 				    - (ia->ia_size & ~PAGE_MASK));
++#endif
+ 
+ 		if (!(crypt_stat->flags & ECRYPTFS_ENCRYPTED)) {
++#ifdef CONFIG_ECRYPT_FS_FAST_INIT
++			ecryptfs_truncate_setsize(inode, ia->ia_size);
++#else
+ 			truncate_setsize(inode, ia->ia_size);
++#endif
+ 			lower_ia->ia_size = ia->ia_size;
+ 			lower_ia->ia_valid |= ATTR_SIZE;
+ 			goto out;
+ 		}
++#ifdef CONFIG_ECRYPT_FS_FAST_INIT
++		num_zeros = (PAGE_SIZE
++			     - (ia->ia_size & ~PAGE_MASK));
++		if (ia->ia_size < i_size && num_zeros) {
++#else
+ 		if (num_zeros) {
++#endif
+ 			char *zeros_virt;
+ 
+ 			zeros_virt = kzalloc(num_zeros, GFP_KERNEL);
+@@ -783,26 +799,40 @@ static int truncate_upper(struct dentry *dentry, struct iattr *ia,
+ 				goto out;
+ 			}
+ 		}
++#ifdef CONFIG_ECRYPT_FS_FAST_INIT
++		ecryptfs_truncate_setsize(inode, ia->ia_size);
++#else
+ 		truncate_setsize(inode, ia->ia_size);
++#endif
+ 		rc = ecryptfs_write_inode_size_to_metadata(inode);
+ 		if (rc) {
+-			printk(KERN_ERR	"Problem with "
+-			       "ecryptfs_write_inode_size_to_metadata; "
+-			       "rc = [%d]\n", rc);
++#ifdef CONFIG_ECRYPT_FS_FAST_INIT
++			if (-EDQUOT != rc && -ENOSPC != rc)
++#endif
++				printk(KERN_ERR	"Problem with "
++				       "ecryptfs_write_inode_size_to_metadata; "
++				       "rc = [%d]\n", rc);
+ 			goto out;
+ 		}
+ 		/* We are reducing the size of the ecryptfs file, and need to
+ 		 * know if we need to reduce the size of the lower file. */
++#ifndef CONFIG_ECRYPT_FS_FAST_INIT
+ 		lower_size_before_truncate =
+ 		    upper_size_to_lower_size(crypt_stat, i_size);
++#endif
+ 		lower_size_after_truncate =
+ 		    upper_size_to_lower_size(crypt_stat, ia->ia_size);
++#ifdef CONFIG_ECRYPT_FS_FAST_INIT
++		lower_ia->ia_size = lower_size_after_truncate;
++		lower_ia->ia_valid |= ATTR_SIZE;
++#else
+ 		if (lower_size_after_truncate < lower_size_before_truncate) {
+ 			lower_ia->ia_size = lower_size_after_truncate;
+ 			lower_ia->ia_valid |= ATTR_SIZE;
+ 		} else
+ 			lower_ia->ia_valid &= ~ATTR_SIZE;
+ 	}
++#endif
+ out:
+ 	ecryptfs_put_lower_file(inode);
+ 	return rc;
+diff --git a/include/linux/mm.h b/include/linux/mm.h
+index 5106db3ad..672df7708 100644
+--- a/include/linux/mm.h
++++ b/include/linux/mm.h
+@@ -1683,6 +1683,9 @@ int generic_access_phys(struct vm_area_s
+ 
+ extern void truncate_pagecache(struct inode *inode, loff_t new);
+ extern void truncate_setsize(struct inode *inode, loff_t newsize);
++#ifdef CONFIG_ECRYPT_FS_FAST_INIT
++extern void ecryptfs_truncate_setsize(struct inode *inode, loff_t newsize);
++#endif
+ void pagecache_isize_extended(struct inode *inode, loff_t from, loff_t to);
+ void truncate_pagecache_range(struct inode *inode, loff_t offset, loff_t end);
+ int truncate_inode_page(struct address_space *mapping, struct page *page);
+diff --git a/mm/truncate.c b/mm/truncate.c
+index 960edf580..6dcd7acb4 100644
+--- a/mm/truncate.c
++++ b/mm/truncate.c
+@@ -860,6 +860,20 @@ void truncate_setsize(struct inode *inod
+ }
+ EXPORT_SYMBOL(truncate_setsize);
+ 
++#ifdef CONFIG_ECRYPT_FS_FAST_INIT
++void ecryptfs_truncate_setsize(struct inode *inode, loff_t newsize)
++{
++	loff_t oldsize;
++
++	oldsize = inode->i_size;
++	i_size_write(inode, newsize);
++
++	if (oldsize > newsize)
++		truncate_pagecache(inode, newsize);
++}
++EXPORT_SYMBOL(ecryptfs_truncate_setsize);
++#endif
++
+ /**
+  * pagecache_isize_extended - update pagecache after extension of i_size
+  * @inode:	inode for which i_size was extended

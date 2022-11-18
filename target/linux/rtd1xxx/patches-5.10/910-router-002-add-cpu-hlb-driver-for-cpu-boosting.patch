@@ -1,0 +1,320 @@
+From 10009936b3c45b27c09e122f711bfbad8b6b8942 Mon Sep 17 00:00:00 2001
+From: Cheng-Yu Lee <cylee12@realtek.com>
+Date: Tue, 26 Jul 2022 17:43:02 +0800
+Subject: [PATCH] soc: realtek: add cpu hlb driver for cpu boosting
+
+Change-Id: I2d84a18b5c43ab0c8fb04820d9352bd57ff553bd
+---
+
+diff --git a/drivers/soc/realtek/common/dvfs/Kconfig b/drivers/soc/realtek/common/dvfs/Kconfig
+index e2f4e26..b1219c6 100644
+--- a/drivers/soc/realtek/common/dvfs/Kconfig
++++ b/drivers/soc/realtek/common/dvfs/Kconfig
+@@ -2,3 +2,6 @@
+ 	tristate "Add OPP prop extn to CPU device"
+ 	default y
+ 
++config RTK_CPU_HIGH_LOAD_BOOSTER
++        bool "Realtek CPU high-load booster"
++        default n
+diff --git a/drivers/soc/realtek/common/dvfs/Makefile b/drivers/soc/realtek/common/dvfs/Makefile
+index ad54785..6aea743 100644
+--- a/drivers/soc/realtek/common/dvfs/Makefile
++++ b/drivers/soc/realtek/common/dvfs/Makefile
+@@ -1 +1,3 @@
+ obj-$(CONFIG_RTK_CPU_VOLT_SEL) += cpu-volt-sel.o
++
++obj-$(CONFIG_RTK_CPU_HIGH_LOAD_BOOSTER) += cpu-hlb.o
+diff --git a/drivers/soc/realtek/common/dvfs/cpu-hlb.c b/drivers/soc/realtek/common/dvfs/cpu-hlb.c
+new file mode 100644
+index 0000000..91ba351
+--- /dev/null
++++ b/drivers/soc/realtek/common/dvfs/cpu-hlb.c
+@@ -0,0 +1,287 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * Copyright (c) 2019,2022 Realtek Semiconductor Corp.
++ * Author: Cheng-Yu Lee <cylee12@realtek.com>
++ */
++
++#include <linux/cpu.h>
++#include <linux/cpufreq.h>
++#include <linux/device.h>
++#include <linux/module.h>
++#include <linux/of.h>
++#include <linux/platform_device.h>
++#include <linux/pm_qos.h>
++#include <linux/slab.h>
++#include <linux/workqueue.h>
++
++struct rtk_cpu_hlb_data {
++	struct device *dev;
++	struct delayed_work dwork;
++	struct cpufreq_policy *policy;
++	struct freq_qos_request qos_req;
++	u32 limit;
++	u64 prev[CONFIG_NR_CPUS];
++	u64 prev_idle[CONFIG_NR_CPUS];
++
++	/* param & sysfs */
++	bool bypass;
++	u32 polling_time;
++	u32 load_th;
++	u32 freq_th;
++};
++
++#define CPU_HLB_U32_DEVICE_ATTR(_m)                           \
++static ssize_t _m ## _store(struct device *dev,               \
++			    struct device_attribute *attr,    \
++			    const char *buf,                  \
++			    size_t count)                     \
++{                                                             \
++	struct rtk_cpu_hlb_data *data = dev_get_drvdata(dev); \
++	int ret;                                              \
++	u32 val;                                              \
++\
++	ret = kstrtou32(buf, 10, &val);                       \
++	if (ret)                                              \
++		return ret;                                   \
++	if (val != data->_m) {                                \
++		data->_m = val;                               \
++		cpufreq_update_policy(0);                     \
++	}                                                     \
++	return count;                                         \
++}                                                             \
++static ssize_t _m ##_show(struct device *dev,                 \
++			  struct device_attribute *attr,      \
++			  char *buf)                          \
++{                                                             \
++	struct rtk_cpu_hlb_data *data = dev_get_drvdata(dev); \
++\
++	return snprintf(buf, PAGE_SIZE, "%u\n", data->_m);    \
++}                                                             \
++DEVICE_ATTR_RW(_m)
++
++CPU_HLB_U32_DEVICE_ATTR(polling_time);
++CPU_HLB_U32_DEVICE_ATTR(load_th);
++CPU_HLB_U32_DEVICE_ATTR(freq_th);
++
++static ssize_t bypass_show(struct device *dev,
++			   struct device_attribute *attr,
++			   char *buf)
++{
++	struct rtk_cpu_hlb_data *data = dev_get_drvdata(dev);
++
++	return snprintf(buf, PAGE_SIZE, "%s\n",
++		data->bypass ? "true" : "false");
++}
++static ssize_t bypass_store(struct device *dev,
++			      struct device_attribute *attr,
++			      const char *buf,
++			      size_t count)
++{
++	struct rtk_cpu_hlb_data *data = dev_get_drvdata(dev);
++	int ret;
++	bool val;
++
++	ret = kstrtobool(buf, &val);
++	if (ret)
++		return ret;
++
++	if (val != data->bypass)
++		data->bypass = val;
++
++	return count;
++}
++DEVICE_ATTR_RW(bypass);
++
++static struct attribute *hlb_attrs[] = {
++	&dev_attr_bypass.attr,
++	&dev_attr_polling_time.attr,
++	&dev_attr_load_th.attr,
++	&dev_attr_freq_th.attr,
++	NULL
++};
++
++static struct attribute_group rtk_cpu_hlb_param_attr_group = {
++	.name = "params",
++	.attrs = hlb_attrs,
++};
++
++static void rtk_cpu_hlb_restart_work(struct rtk_cpu_hlb_data *data)
++{
++	queue_delayed_work(system_freezable_wq, &data->dwork,
++		msecs_to_jiffies(data->polling_time));
++}
++
++static u32 get_load(struct rtk_cpu_hlb_data *data, int cpu)
++{
++	u32 load;
++	u64 now, now_idle, delta_time, delta_idle;
++
++	now_idle = get_cpu_idle_time(cpu, &now, 0);
++	delta_idle = now_idle - data->prev_idle[cpu];
++	delta_time = now - data->prev[cpu];
++
++	if (delta_time <= delta_idle)
++		load = 0;
++	else
++		load = div64_u64(100 * (delta_time - delta_idle), delta_time);
++
++	data->prev_idle[cpu] = now_idle;
++	data->prev[cpu] = now;
++
++	return load;
++}
++
++
++static int rtk_cpu_hlb_get_cpu_load(struct rtk_cpu_hlb_data *data, u32 *max_load)
++{
++	u32 i;
++
++	if (data->bypass)
++		return -EINVAL;
++
++	*max_load = 0;
++	for_each_cpu(i, data->policy->related_cpus) {
++		u32 load = get_load(data, i);
++
++		if (load > *max_load)
++			*max_load = load;
++	}
++
++	return 0;
++}
++
++static void rtk_cpu_hlb_load_worker(struct work_struct *work)
++{
++	struct rtk_cpu_hlb_data *data = container_of(work, struct rtk_cpu_hlb_data, dwork.work);
++	u32 max_load = 0;
++	u32 prev_limit;
++	int ret;
++
++	ret = rtk_cpu_hlb_get_cpu_load(data, &max_load);
++	if (ret)
++		goto done;
++
++	dev_dbg(data->dev, "max_load=%u\n", max_load);
++
++	prev_limit = data->limit;
++	data->limit = max_load <= data->load_th;
++	if (prev_limit != data->limit) {
++		s32 freq = data->limit ? data->freq_th : FREQ_QOS_MAX_DEFAULT_VALUE;
++		int ret;
++
++		ret = freq_qos_update_request(&data->qos_req, freq);
++		dev_dbg(data->dev, "update freq=%u, update_ret=%d, qos_val=%d\n", freq, ret, freq_qos_read_value(&data->policy->constraints, FREQ_QOS_MAX));
++	}
++done:
++
++	rtk_cpu_hlb_restart_work(data);
++}
++
++static int rtk_cpu_hlb_parse_dt(struct rtk_cpu_hlb_data *data, struct device_node *np)
++{
++	int ret;
++
++	data->bypass = of_property_read_bool(np, "realtek,hlb-bypass");
++
++	data->polling_time = 500;
++	of_property_read_u32(np, "realtek,hlb-polling-ms", &data->polling_time);
++
++	data->load_th = 90;
++	of_property_read_u32(np, "realtek,hlb-load-threshold", &data->load_th);
++
++	ret = of_property_read_u32(np, "realtek,hlb-freq-threshold-khz", &data->freq_th);
++	if (ret)
++		return ret;
++	return ret;
++}
++
++static int rtk_cpu_hlb_probe(struct platform_device *pdev)
++{
++	struct device *dev = &pdev->dev;
++	struct rtk_cpu_hlb_data *data;
++	int ret;
++
++	data = devm_kzalloc(dev, sizeof(*data), GFP_KERNEL);
++	if (!data)
++		return -ENOMEM;
++
++	data->dev = dev;
++
++	ret = rtk_cpu_hlb_parse_dt(data, dev->of_node);
++	if (ret < 0) {
++		dev_err(dev, "error %pe: failed to parse dt\n", ERR_PTR(ret));
++		return ret;
++	}
++
++	data->policy = cpufreq_cpu_get(cpumask_first(cpu_online_mask));
++	if (!data->policy)
++		return -EPROBE_DEFER;
++
++	ret = freq_qos_add_request(&data->policy->constraints, &data->qos_req,
++		FREQ_QOS_MAX, data->freq_th);
++	if (ret < 0) {
++		dev_err(dev, "error %pe: failed to add freq qos request\n", ERR_PTR(ret));
++		goto put_cpufreq;
++	}
++
++	ret = sysfs_create_group(&dev->kobj, &rtk_cpu_hlb_param_attr_group);
++	if (ret) {
++		dev_err(dev, "error %pe: failed to create sysfs group\n", ERR_PTR(ret));
++		goto remove_qos_request;
++	}
++
++	INIT_DELAYED_WORK(&data->dwork, rtk_cpu_hlb_load_worker);
++
++	platform_set_drvdata(pdev, data);
++
++	cpufreq_boost_trigger_state(1);
++
++	rtk_cpu_hlb_restart_work(data);
++
++	return 0;
++
++remove_qos_request:
++	freq_qos_remove_request(&data->qos_req);
++put_cpufreq:
++	cpufreq_cpu_put(data->policy);
++	return ret;
++}
++
++static int rtk_cpu_hlb_remove(struct platform_device *pdev)
++{
++	struct rtk_cpu_hlb_data *data = platform_get_drvdata(pdev);
++	struct device *dev = &pdev->dev;
++
++	cancel_delayed_work(&data->dwork);
++
++	cpufreq_boost_trigger_state(0);
++
++	sysfs_remove_group(&dev->kobj, &rtk_cpu_hlb_param_attr_group);
++
++	freq_qos_remove_request(&data->qos_req);
++
++	cpufreq_cpu_put(data->policy);
++
++	return 0;
++}
++
++static const struct of_device_id rtk_cpu_hlb_of_match[] = {
++	{ .compatible = "realtek,cpu-hlb", },
++	{}
++};
++
++static struct platform_driver rtk_cpu_hlb_driver = {
++	.driver = {
++		.owner = THIS_MODULE,
++		.name = "rtk-cpu-hlb",
++		.of_match_table = of_match_ptr(rtk_cpu_hlb_of_match),
++	},
++	.probe = rtk_cpu_hlb_probe,
++	.remove = rtk_cpu_hlb_remove,
++};
++module_platform_driver(rtk_cpu_hlb_driver);
++
++MODULE_DESCRIPTION("Realtek CPU High-Load Booster driver");
++MODULE_LICENSE("GPL");
++MODULE_ALIAS("platform:rtk-cpu-hlb");
++MODULE_AUTHOR("Cheng-Yu Lee <cylee12@realtek.com>");

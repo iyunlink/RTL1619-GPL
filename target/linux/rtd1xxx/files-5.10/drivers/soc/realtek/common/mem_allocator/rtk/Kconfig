@@ -1,0 +1,12 @@
+config ION_RTK_DHC_HEAP
+	tristate "Ion heap for Realtek DHC platform"
+	depends on ION
+	help
+	  Choose this option if you wish to use customize ION heap for Realtek DHC platform.
+
+config ION_RTK_LEGACY_DEVICE
+	bool "Legacy ion device to match old usage"
+	default n
+	depends on ION_RTK_DHC_HEAP
+	help
+	  Choose this option if you wish to use legacy device /dev/ion_legacy .

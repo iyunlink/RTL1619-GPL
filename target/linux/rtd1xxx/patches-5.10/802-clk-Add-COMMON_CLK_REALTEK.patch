@@ -1,0 +1,37 @@
+From 154dbec454b86d494984ffe212c290d603e9c382 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 13:59:00 +0800
+Subject: [PATCH 21/54] 802: clk: Add COMMON_CLK_REALTEK
+
+---
+ drivers/clk/Kconfig  | 1 +
+ drivers/clk/Makefile | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/drivers/clk/Kconfig b/drivers/clk/Kconfig
+index c715d4681..5cba34255 100644
+--- a/drivers/clk/Kconfig
++++ b/drivers/clk/Kconfig
+@@ -372,6 +372,7 @@ source "drivers/clk/mediatek/Kconfig"
+ source "drivers/clk/meson/Kconfig"
+ source "drivers/clk/mvebu/Kconfig"
+ source "drivers/clk/qcom/Kconfig"
++source "drivers/clk/realtek/Kconfig"
+ source "drivers/clk/renesas/Kconfig"
+ source "drivers/clk/rockchip/Kconfig"
+ source "drivers/clk/samsung/Kconfig"
+diff --git a/drivers/clk/Makefile b/drivers/clk/Makefile
+index da8fcf147..08c7bc694 100644
+--- a/drivers/clk/Makefile
++++ b/drivers/clk/Makefile
+@@ -100,6 +100,7 @@ obj-$(CONFIG_COMMON_CLK_NXP)		+= nxp/
+ obj-$(CONFIG_MACH_PISTACHIO)		+= pistachio/
+ obj-$(CONFIG_COMMON_CLK_PXA)		+= pxa/
+ obj-$(CONFIG_COMMON_CLK_QCOM)		+= qcom/
++obj-$(CONFIG_COMMON_CLK_REALTEK)	+= realtek/
+ obj-y					+= renesas/
+ obj-$(CONFIG_ARCH_ROCKCHIP)		+= rockchip/
+ obj-$(CONFIG_COMMON_CLK_SAMSUNG)	+= samsung/
+-- 
+2.17.1
+

@@ -1,0 +1,16 @@
+Realtek Information provider DT-bindings
+========================================
+
+1. pll
+
+required properties:
+
+* compatible: should be one of the followings:
+	"realtek,rtd139x-pll-info", or
+	"realtek,rtd161x-pll-info", or
+	"realtek,rtd161xb-pll-info".
+
+* realtek,crt: a phandle to crt syscon.
+
+* realtek,scpu-wrapper: a phandle to scpu wrapper syscon.
+

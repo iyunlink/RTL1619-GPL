@@ -1,0 +1,10 @@
+--- a/drivers/net/wireless/realtek/rtkwifiu/rtl8852be/Kconfig
++++ b/drivers/net/wireless/realtek/rtkwifiu/rtl8852be/Kconfig
+@@ -1,6 +1,6 @@
+ config RTL8852BE
+ 	tristate "Realtek 8852B PCIE WiFi"
+-	depends on PCIE
++	depends on PCIE || PCI
+ 	---help---
+ 	  Help message of RTL8852BE
+ 

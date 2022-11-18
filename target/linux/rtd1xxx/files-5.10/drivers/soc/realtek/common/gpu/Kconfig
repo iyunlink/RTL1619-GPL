@@ -1,0 +1,6 @@
+config RTK_GPU_WRAP
+	tristate "Realtek GPU Wrapper Driver"
+	depends on ARCH_REALTEK
+	default y
+	help
+	  This enable Realtek GPU Wrapper Driver.

@@ -1,0 +1,46 @@
+Realtek Dbus (DC-SYS) PMU dt-bindings
+=====================================
+
+Required properties:
+- compatible:
+        "realtek,rtk-16xxb-dbus-pmu" for rtd16xxb family
+- reg: address range of Dbus PMU
+
+Optional properties:
+- overflow: indicating the PMU has overflow interrupt
+
+Performance Counters Subnode
+----------------------------
+Each subnode of Dbus PMU represents a set of PMC groups which has its own
+counter groups and controlling mechanism, but will be enabled and disabled
+together with Dbus PMU.
+
+Required properties:
+- compatible:
+	"dbus-sysh"
+	"dbus-sys"
+	"dbus-ch"
+
+Optional properties:
+- nr_defects: the number of counters which may work incorrectly
+- defects: array of the index of problematic counters
+
+Example:
+
+	dbus-pmu: rtk-dbus-pmu@8000 {
+		compatible = "realtek,rtk-16xxb-dbus-pmu";
+		#address-cells = <1>;
+		#size-cells = <1>;
+		reg = <0x0 0x8000 0x0 0x0d00>;
+		overflow = <1>;
+
+		dbus-sysh: dbus-sysh {
+			nr_defects = <2>;
+			defects = <1 3>;
+		};
+
+		dbus-sys: dbus-sys {
+			nr_defects = <1>;
+			defects = <0>;
+		};
+	};

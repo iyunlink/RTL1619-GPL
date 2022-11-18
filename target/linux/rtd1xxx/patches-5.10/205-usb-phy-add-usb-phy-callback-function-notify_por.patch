@@ -1,0 +1,55 @@
+From 80637f556902a68c4ba68f143cca3e7e1f7efa77 Mon Sep 17 00:00:00 2001
+From: Stanley Chang <stanley_chang@realtek.com>
+Date: Thu, 30 Dec 2021 13:35:40 +0800
+Subject: [PATCH 07/54] 205: usb: phy: add usb phy callback function
+ notify_port_change
+
+[REVIEWER] CY Huang
+[Information]
+Notify usb phy port change status.
+In order to toggle phy parameter (u2phy and u3phy).
+
+Change-Id: I5c586fe7b939c4581e5538fb68a0bf5843211462
+---
+ include/linux/usb/phy.h | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/include/linux/usb/phy.h b/include/linux/usb/phy.h
+index e4de6bc1f..d924314b3 100644
+--- a/include/linux/usb/phy.h
++++ b/include/linux/usb/phy.h
+@@ -144,6 +144,12 @@ struct usb_phy {
+ 	 */
+ 	int	(*set_wakeup)(struct usb_phy *x, bool enabled);
+ 
++#if 1 /* USB_PATCH_BY_RTK */
++	/* notify phy port status change */
++	int	(*notify_port_change)(struct usb_phy *x,
++		int port, u16 portstatus, u16 portchange);
++#endif /* USB_PATCH_BY_RTK */
++
+ 	/* notify phy connect status change */
+ 	int	(*notify_connect)(struct usb_phy *x,
+ 			enum usb_device_speed speed);
+@@ -316,6 +322,18 @@ usb_phy_set_wakeup(struct usb_phy *x, bool enabled)
+ 		return 0;
+ }
+ 
++#if 1 /* USB_PATCH_BY_RTK */
++static inline int
++usb_phy_notify_port_change(struct usb_phy *x, int port, u16 portstatus,
++	    u16 portchange)
++{
++	if (x && x->notify_port_change)
++		return x->notify_port_change(x, port, portstatus, portchange);
++	else
++		return 0;
++}
++#endif /* USB_PATCH_BY_RTK */
++
+ static inline int
+ usb_phy_notify_connect(struct usb_phy *x, enum usb_device_speed speed)
+ {
+-- 
+2.17.1
+

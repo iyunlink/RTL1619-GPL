@@ -1,0 +1,53 @@
+From 289bd88a23c8c8c7d4cbdfe2166c7658d8071f6d Mon Sep 17 00:00:00 2001
+From: James Tai <james.tai@realtek.com>
+Date: Mon, 31 Aug 2020 10:55:23 +0800
+Subject: [PATCH 05/54] 203: tee: Add tee_shm_register_fd function [REVIEWER]
+ Barry Ho
+
+register a shared memory from a file descriptor.
+---
+ include/linux/tee_drv.h | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/include/linux/tee_drv.h b/include/linux/tee_drv.h
+index 18a9949bb..c7537b851 100644
+--- a/include/linux/tee_drv.h
++++ b/include/linux/tee_drv.h
+@@ -188,7 +188,8 @@ int tee_session_calc_client_uuid(uuid_t *uuid, u32 connection_method,
+ 
+ /**
+  * struct tee_shm - shared memory object
+- * @ctx:	context using the object
++ * @teedev:	device used to allocate the object
++ * @ctx:	context using the object, if NULL the context is gone
+  * @paddr:	physical address of the shared memory
+  * @kaddr:	virtual address of the shared memory
+  * @size:	size of shared memory
+@@ -203,6 +204,7 @@ int tee_session_calc_client_uuid(uuid_t *uuid, u32 connection_method,
+  * subsystem and from drivers that implements their own shm pool manager.
+  */
+ struct tee_shm {
++	struct tee_device *teedev;
+ 	struct tee_context *ctx;
+ 	phys_addr_t paddr;
+ 	void *kaddr;
+@@ -357,6 +359,16 @@ static inline bool tee_shm_is_registered(struct tee_shm *shm)
+ 	return shm && (shm->flags & TEE_SHM_REGISTER);
+ }
+ 
++/**
++ * tee_shm_register_fd() - Register shared memory from file descriptor
++ *
++ * @ctx:	Context that allocates the shared memory
++ * @fd:		shared memory file descriptor reference.
++ *
++ * @returns a pointer to 'struct tee_shm'
++ */
++struct tee_shm *tee_shm_register_fd(struct tee_context *ctx, int fd);
++
+ /**
+  * tee_shm_free() - Free shared memory
+  * @shm:	Handle to shared memory to free
+-- 
+2.17.1
+

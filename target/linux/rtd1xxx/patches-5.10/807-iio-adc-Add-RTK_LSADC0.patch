@@ -1,0 +1,44 @@
+From 58d03b896907889de8c723f9af2d705837d35dfb Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:08:32 +0800
+Subject: [PATCH 26/54] 807: iio: adc: Add RTK_LSADC0
+
+---
+ drivers/iio/adc/Kconfig  | 8 ++++++++
+ drivers/iio/adc/Makefile | 1 +
+ 2 files changed, 9 insertions(+)
+
+diff --git a/drivers/iio/adc/Kconfig b/drivers/iio/adc/Kconfig
+index e39b67912..12b740a29 100644
+--- a/drivers/iio/adc/Kconfig
++++ b/drivers/iio/adc/Kconfig
+@@ -876,6 +876,14 @@ config ROCKCHIP_SARADC
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called rockchip_saradc.
+ 
++config RTK_LSADC0
++	tristate "Realtek LSADC driver"
++	depends on ARCH_REALTEK
++	default n
++	help
++	  Say Y, if you want to enable LSADC feature on Realtek RTD129x,
++	  RTD139x, RTD16xx, RTD13xx, or RTD16xxb platform.
++
+ config SC27XX_ADC
+ 	tristate "Spreadtrum SC27xx series PMICs ADC"
+ 	depends on MFD_SC27XX_PMIC || COMPILE_TEST
+diff --git a/drivers/iio/adc/Makefile b/drivers/iio/adc/Makefile
+index 90f94ada7..e9d7c3edb 100644
+--- a/drivers/iio/adc/Makefile
++++ b/drivers/iio/adc/Makefile
+@@ -81,6 +81,7 @@ obj-$(CONFIG_QCOM_PM8XXX_XOADC) += qcom-pm8xxx-xoadc.o
+ obj-$(CONFIG_RCAR_GYRO_ADC) += rcar-gyroadc.o
+ obj-$(CONFIG_RN5T618_ADC) += rn5t618-adc.o
+ obj-$(CONFIG_ROCKCHIP_SARADC) += rockchip_saradc.o
++obj-$(CONFIG_RTK_LSADC0) += rtk_lsadc0.o
+ obj-$(CONFIG_SC27XX_ADC) += sc27xx_adc.o
+ obj-$(CONFIG_SPEAR_ADC) += spear_adc.o
+ obj-$(CONFIG_STX104) += stx104.o
+-- 
+2.17.1
+

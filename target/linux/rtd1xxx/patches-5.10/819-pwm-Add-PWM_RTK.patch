@@ -1,0 +1,43 @@
+From 1ac5b9537d8231b4d2ca53b15d26c6cadb8ba786 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:31:56 +0800
+Subject: [PATCH 38/54] 819: pwm: Add PWM_RTK
+
+---
+ drivers/pwm/Kconfig  | 7 +++++++
+ drivers/pwm/Makefile | 1 +
+ 2 files changed, 8 insertions(+)
+
+diff --git a/drivers/pwm/Kconfig b/drivers/pwm/Kconfig
+index 63be5362f..943067d43 100644
+--- a/drivers/pwm/Kconfig
++++ b/drivers/pwm/Kconfig
+@@ -408,6 +408,13 @@ config PWM_ROCKCHIP
+ 	  Generic PWM framework driver for the PWM controller found on
+ 	  Rockchip SoCs.
+ 
++config PWM_RTK
++	tristate "Realtek PWM support"
++	depends on ARCH_REALTEK
++	default n
++	help
++	  Say Y, if you want to enable PWM feature on Realtek platform.
++
+ config PWM_SAMSUNG
+ 	tristate "Samsung PWM support"
+ 	depends on PLAT_SAMSUNG || ARCH_S5PV210 || ARCH_EXYNOS || COMPILE_TEST
+diff --git a/drivers/pwm/Makefile b/drivers/pwm/Makefile
+index cbdcd55d6..3b93d8541 100644
+--- a/drivers/pwm/Makefile
++++ b/drivers/pwm/Makefile
+@@ -38,6 +38,7 @@ obj-$(CONFIG_PWM_PXA)		+= pwm-pxa.o
+ obj-$(CONFIG_PWM_RCAR)		+= pwm-rcar.o
+ obj-$(CONFIG_PWM_RENESAS_TPU)	+= pwm-renesas-tpu.o
+ obj-$(CONFIG_PWM_ROCKCHIP)	+= pwm-rockchip.o
++obj-$(CONFIG_PWM_RTK)		+= pwm-rtk.o
+ obj-$(CONFIG_PWM_SAMSUNG)	+= pwm-samsung.o
+ obj-$(CONFIG_PWM_SIFIVE)	+= pwm-sifive.o
+ obj-$(CONFIG_PWM_SL28CPLD)	+= pwm-sl28cpld.o
+-- 
+2.17.1
+

@@ -1,0 +1,35 @@
+From 694f7434caa04ff20284c84af022bc6ef1ed7c99 Mon Sep 17 00:00:00 2001
+From: "Isaac J. Manjarres" <isaacm@codeaurora.org>
+Date: Thu, 23 Jul 2020 12:45:21 -0700
+Subject: [PATCH 37/50] ANDROID: staging: android: ion: Fix compilation error
+ for ion_trace.h
+
+Mark __ion_ptr_to_hash as __maybe_unused to fix compilation errors
+in environments where the -Wunused-function compilation flag is
+used, and tracepoints are not enabled.
+
+Bug: 162007514
+Fixes: 0f73cdae39be ("ANDROID: add ion_stat tracepoint to common kernel")
+Change-Id: I2eee59d137bb47b40c538f6e2abc60d9f08ca6cd
+Signed-off-by: Isaac J. Manjarres <isaacm@codeaurora.org>
+(cherry picked from commit b29688f758be15a96e568d92cd2106a5a474c13f)
+---
+ drivers/staging/android/ion/ion_trace.h | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/drivers/staging/android/ion/ion_trace.h b/drivers/staging/android/ion/ion_trace.h
+index 8233691a7..eacb47d4f 100644
+--- a/drivers/staging/android/ion/ion_trace.h
++++ b/drivers/staging/android/ion/ion_trace.h
+@@ -14,7 +14,7 @@
+ #include <linux/tracepoint.h>
+ 
+ #ifndef __ION_PTR_TO_HASHVAL
+-static unsigned int __ion_ptr_to_hash(const void *ptr)
++static unsigned int __maybe_unused __ion_ptr_to_hash(const void *ptr)
+ {
+ 	unsigned long hashval;
+ 
+-- 
+2.17.1
+

@@ -1,0 +1,181 @@
+From f9cbf77743b837b22a6f8baba78bc91c796d8c40 Mon Sep 17 00:00:00 2001
+From: "pk.chuang" <pk.chuang@realtek.com>
+Date: Wed, 18 Aug 2021 14:43:54 +0800
+Subject: [PATCH] [DEV_FIX][SPI-NOR] Fix mtd name as "RtkSFC"
+
+- [DEV_FIX][SPI-NOR] fix compilation warning
+- NASPRJ-567: SFC: Fix write data incorrectly.
+- [DEV_FIX][SPI-NOR] Change spi nor pad driving.
+
+Change-Id: Iadfe8e5a2d299c8f0bc1da4dd5d808e5bd761a36
+---
+ drivers/mtd/spi-nor/controllers/rtk-sfc.c | 2 +-
+ drivers/mtd/spi-nor/rtk-sfc.c | 9 ++++++---
+
+Index: linux-5.10.109/drivers/mtd/spi-nor/rtk-sfc.c
+===================================================================
+--- linux-5.10.109.orig/drivers/mtd/spi-nor/rtk-sfc.c
++++ linux-5.10.109/drivers/mtd/spi-nor/rtk-sfc.c
+@@ -154,14 +154,13 @@ static void rtk_spi_nor_init_setting(voi
+ 	void __iomem *regbase;
+ 
+ 	regbase = ioremap(0x98000018, 0x4);
+-	writel(readl(regbase) & (~(0x1<< 0)) | (0x0<< 0), regbase);
++	writel(readl(regbase) & ((~(0x1<< 0)) | (0x0<< 0)), regbase);
+ 	iounmap(regbase);
+ 
+ 	regbase = ioremap(0x9804e000, 0x200);
+ 	rtk_set_reg(regbase + 0x120, 11, 1, 1);
+ 	rtk_set_reg(regbase, 24, 8, 0xAA);
+ 	iounmap(regbase);
+-
+ }
+ 
+ static void rtk_spi_nor_driving(unsigned int vdd, unsigned int p_drv, unsigned int n_drv)
+@@ -203,8 +202,6 @@ static void rtk_spi_nor_driving(unsigned
+ 
+ static void rtk_spi_nor_init(struct rtksfc_host *host)
+ {
+-	unsigned int reg_muxpad = 0;
+-
+ 	rtk_spi_nor_init_setting();
+ 
+ 	host->iobase = ioremap(NOR_BASE_PHYS, 0x2000000);
+@@ -216,42 +213,18 @@ static void rtk_spi_nor_init(struct rtks
+ 	writel(0x00000005, host->regbase + SFC_WAIT_WR);
+ 	writel(0x00000006, host->regbase + SFC_EN_WR);
+ 
+-	rtk_spi_nor_driving(1, 4, 3);
++	rtk_spi_nor_driving(1, 0x1, 0x0);
+ 
+ 	return;	
+ }
+ 
+ static int rtk_spi_nor_prep(struct spi_nor *nor)
+ {
+-	struct rtksfc_priv *priv = nor->priv;
+-	struct rtksfc_host *host = priv->host;
+-	const struct spi_nor_controller_ops *ops = nor->controller_ops;
+-#if 0
+-	switch (ops) {
+-	case SPI_NOR_OPS_READ:
+-		rtk_spi_nor_disable_auto_write(host);
+-		break;
+-
+-	case SPI_NOR_OPS_WRITE:
+-		rtk_spi_nor_enable_auto_write(host);
+-		break;
+-
+-	case SPI_NOR_OPS_ERASE:
+-		rtk_spi_nor_disable_auto_write(host);
+-		break;
+-
+-	default:
+-		break;
+-	}
+-#endif
+-
+ 	return 0;
+ }
+ 
+ static void rtk_spi_nor_unprep(struct spi_nor *nor)
+ {
+-	const struct spi_nor_controller_ops *ops = nor->controller_ops;
+-
+ #if 0
+ 	switch (ops) {
+ 	case SPI_NOR_OPS_READ:
+@@ -418,6 +391,8 @@ static ssize_t rtk_spi_nor_read(struct s
+ 	int ret;
+ 	int i;
+ 
++	rtk_spi_nor_disable_auto_write(host);
++
+ 	offset = from & 0x3;
+ 
+ 	/* Byte stage */
+@@ -461,18 +436,22 @@ static ssize_t rtk_spi_nor_write(struct
+ 	struct rtksfc_priv *priv = nor->priv;
+ 	struct rtksfc_host *host = priv->host;
+ 	int r_len = (int)len, w_len = 0;
++	u_char *w_buf = (u_char *)write_buf;
+ 	int offset;
+ 	int ret;
+ 	int i;
+ 
++	rtk_spi_nor_enable_auto_write(host);
++
+ 	offset = to & 0x3;
+ 
+ 	/* byte stage */
+ 	if (offset != 0) {
+ 		w_len = (offset > len) ? len : offset;
+ 		rtk_spi_nor_write_mode(host);
+-		ret = rtk_spi_nor_byte_transfer(nor, to, w_len, (u8 *)write_buf, 
++		ret = rtk_spi_nor_byte_transfer(nor, to, w_len, (u8 *)w_buf,
+ 							RTKSFC_OP_WRITE);
++		w_buf += w_len;
+ 	}
+ 
+ 	to = to + w_len;
+@@ -484,7 +463,7 @@ static ssize_t rtk_spi_nor_write(struct
+ 		w_len = (r_len >= RTKSFC_DMA_MAX_LEN) ? RTKSFC_DMA_MAX_LEN : r_len;
+ 
+ 		for(i = 0; i < w_len; i++)
+-			*(u8 *)(host->buffer + i) = *(u8 *)(write_buf + i);
++			*(u8 *)(host->buffer + i) = *(u8 *)(w_buf + i);
+ 
+ 		rtk_spi_nor_write_mode(host);
+ 
+@@ -493,6 +472,7 @@ static ssize_t rtk_spi_nor_write(struct
+ 
+ 		r_len = r_len - w_len;
+ 		offset = offset + w_len;
++		w_buf += w_len;
+ 	}
+ 
+ 	rtk_spi_nor_read_mode(host);
+@@ -502,10 +482,16 @@ static ssize_t rtk_spi_nor_write(struct
+ 
+ static int rtk_spi_nor_erase(struct spi_nor *nor, loff_t offs)
+ {
++	struct mtd_info *mtd = &nor->mtd;
+ 	struct rtksfc_priv *priv = nor->priv;
+         struct rtksfc_host *host = priv->host;
+ 	unsigned char tmp;
+ 
++	rtk_spi_nor_disable_auto_write(host);
++
++	if (mtd->erasesize == 4096)
++		writel(SPINOR_OP_BE_4K, host->regbase + SFC_OPCODE);
++	else
+ 	writel(nor->erase_opcode, host->regbase + SFC_OPCODE);
+ 	udelay(50);
+ 	writel(0x08, host->regbase + SFC_CTL);	
+@@ -516,7 +502,6 @@ static int rtk_spi_nor_erase(struct spi_
+ 	return rtk_spi_nor_read_status(host);
+ }
+ 
+-
+ static const struct spi_nor_controller_ops rtk_controller_ops = {
+ 	.prepare = rtk_spi_nor_prep,
+ 	.unprepare = rtk_spi_nor_unprep,
+@@ -567,7 +552,7 @@ static int rtk_spi_nor_register(struct d
+ 	mtd = &nor->mtd;
+ 	mtd->writesize = nor->page_size;
+ 
+-	//mtd->name = np->name;
++	mtd->name = "RtkSFC";
+ 	ret = mtd_device_register(mtd, NULL, 0);
+ 	if (ret)
+ 		return ret;
+@@ -588,8 +573,7 @@ static void rtk_spi_nor_unregister_all(s
+ 
+ static int rtk_spi_nor_register_all(struct rtksfc_host *host)
+ {
+-	struct device *dev = host->dev;
+-	struct device_node *np;
++	struct device_node *np = NULL;
+ 	int ret;
+ 
+ 	//for_each_available_child_of_node(dev->of_node, np) {

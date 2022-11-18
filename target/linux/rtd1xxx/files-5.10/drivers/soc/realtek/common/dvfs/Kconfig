@@ -1,0 +1,4 @@
+config RTK_CPU_VOLT_SEL
+	tristate "Add OPP prop extn to CPU device"
+	default y
+

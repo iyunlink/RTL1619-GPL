@@ -1,0 +1,101 @@
+From e2b7b8699d345b7514e1ebd12e78d611c894db5f Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:24:42 +0800
+Subject: [PATCH 14/54] 700: net: realtek: Add R8169SOC, R8168 and R8125
+
+---
+ drivers/net/ethernet/realtek/Kconfig  | 60 ++++++++++++++++++++++++++-
+ drivers/net/ethernet/realtek/Makefile |  4 ++
+ 2 files changed, 63 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/net/ethernet/realtek/Kconfig b/drivers/net/ethernet/realtek/Kconfig
+index 93d9df55b..a8955778f 100644
+--- a/drivers/net/ethernet/realtek/Kconfig
++++ b/drivers/net/ethernet/realtek/Kconfig
+@@ -6,7 +6,7 @@
+ config NET_VENDOR_REALTEK
+ 	bool "Realtek devices"
+ 	default y
+-	depends on PCI || (PARPORT && X86)
++	depends on PCI || (PARPORT && X86) || ARCH_REALTEK
+ 	help
+ 	  If you have a network (Ethernet) card belonging to this class, say Y.
+ 
+@@ -113,4 +113,62 @@ config R8169
+ 	  To compile this driver as a module, choose M here: the module
+ 	  will be called r8169.  This is recommended.
+ 
++config R8169SOC
++	tristate "Realtek 8169SoC gigabit ethernet support"
++	depends on ARCH_REALTEK
++	select CRC32
++	select MII
++	help
++	  Say Y here if you have a Realtek 8169 SoC for RTK Gigabit Ethernet adapter.
++
++	  To compile this driver as a module, choose M here: the module
++	  will be called r8169soc.  This is recommended.
++
++config R8168
++	tristate "Realtek 8168 gigabit ethernet support"
++	depends on PCI
++	select FW_LOADER
++	select CRC32
++	select MII
++	help
++	  Say Y here if you have a Realtek 8168 PCI Gigabit Ethernet adapter.
++
++	  To compile this driver as a module, choose M here: the module
++	  will be called r8168.  This is recommended.
++
++config R8168_ACP
++	tristate "Realtek 8168 gigabit ethernet ACP support"
++	depends on R8168 && RTD16XXB_PCIE1_ACP
++	help
++		Say Y here if Realtek 16xxb PCIe host driver enable ACP feature.
++
++
++config R8125
++	tristate "Realtek 8125 gigabit ethernet support"
++	depends on PCI
++	select FW_LOADER
++	select CRC32
++	select MII
++	help
++	  Say Y here if you have a Realtek 8125 PCI Gigabit Ethernet adapter.
++
++	  To compile this driver as a module, choose M here: the module
++	  will be called r8125.  This is recommended.
++
++config R8125_ACP
++	tristate "Realtek 8125 gigabit ethernet ACP support"
++	depends on R8125 && RTD16XXB_PCIE1_ACP
++	help
++		Say Y here if Realtek 16xxb PCIe host driver enable ACP feature.
++
++
++config RTL_RX_NO_COPY
++	bool "Support to receive packets without memory copy"
++	default n
++	depends on R8169SOC
++	help
++	  This is a feature of Realtek 8169SoC gigabit ethernet driver.
++	  Say Y here to impove performance and reduce CPU loading.
++	  Say N here to save memory for packet buffers.
++
+ endif # NET_VENDOR_REALTEK
+diff --git a/drivers/net/ethernet/realtek/Makefile b/drivers/net/ethernet/realtek/Makefile
+index 2e1d78b10..483c38e35 100644
+--- a/drivers/net/ethernet/realtek/Makefile
++++ b/drivers/net/ethernet/realtek/Makefile
+@@ -8,3 +8,7 @@ obj-$(CONFIG_8139TOO) += 8139too.o
+ obj-$(CONFIG_ATP) += atp.o
+ r8169-objs += r8169_main.o r8169_firmware.o r8169_phy_config.o
+ obj-$(CONFIG_R8169) += r8169.o
++obj-$(CONFIG_R8169SOC) += r8169soc.o
++obj-$(CONFIG_R8168) += r8168/
++obj-$(CONFIG_R8125) += r8125/
++
+-- 
+2.17.1
+

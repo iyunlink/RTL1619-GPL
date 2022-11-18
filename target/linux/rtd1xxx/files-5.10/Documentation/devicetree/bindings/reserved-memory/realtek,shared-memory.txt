@@ -1,0 +1,4 @@
+* Realtek DHC platforms reserved-memory binding
+
+- compatible:
+	compatible = "ringbuf", "audio_heap", "media_heap";

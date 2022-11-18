@@ -1,0 +1,25 @@
+From c683b2e2f939b3b2b9a59e499733cf741dd67181 Mon Sep 17 00:00:00 2001
+From: AmadeusGhost <42570690+AmadeusGhost@users.noreply.github.com>
+Date: Fri, 14 Jan 2022 18:47:14 +0800
+Subject: [PATCH 4/6] shortcut-fe-cm: fixes unknown symbol issues (#8460)
+
+---
+ shortcut-fe/sfe_cm.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/shortcut-fe/sfe_cm.c b/shortcut-fe/sfe_cm.c
+index ddd591b..bf3d3a6 100644
+--- a/shortcut-fe/sfe_cm.c
++++ b/shortcut-fe/sfe_cm.c
+@@ -934,7 +934,7 @@ static void sfe_cm_sync_rule(struct sfe_connection_sync *sis)
+ #else
+ 				timeouts = nf_ct_timeout_lookup(ct);
+ 				if (!timeouts) {
+-					timeouts = udp_get_timeouts(nf_ct_net(ct));
++					timeouts = nf_udp_pernet(nf_ct_net(ct))->timeouts;
+ 				}
+ 
+ 				spin_lock_bh(&ct->lock);
+-- 
+2.17.1
+

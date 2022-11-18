@@ -1,0 +1,47 @@
+From 27172072550b11e4ddacc172a398963a95eec9a2 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:17:40 +0800
+Subject: [PATCH 28/54] 809: media: platform: Add RTK HDMI
+
+---
+ drivers/media/platform/Kconfig  |  5 +++++
+ drivers/media/platform/Makefile | 12 ++++++++++++
+ 2 files changed, 17 insertions(+)
+
+diff --git a/drivers/media/platform/Kconfig b/drivers/media/platform/Kconfig
+index 7e152bbb4..26aacdb8b 100644
+--- a/drivers/media/platform/Kconfig
++++ b/drivers/media/platform/Kconfig
+@@ -581,3 +581,8 @@ config VIDEO_RCAR_DRIF
+ 	  will be called rcar_drif.
+ 
+ endif # SDR_PLATFORM_DRIVERS
++source "drivers/media/platform/rtk_hdmitx/Kconfig"
++source "drivers/media/platform/rtk_hdcptx/Kconfig"
++source "drivers/media/platform/rtk-cec/Kconfig"
++source "drivers/media/platform/rtk_dsi/Kconfig"
++source "drivers/media/platform/rtk_tpdemux/Kconfig"
+diff --git a/drivers/media/platform/Makefile b/drivers/media/platform/Makefile
+index 62b6cdc8c..7a9c82426 100644
+--- a/drivers/media/platform/Makefile
++++ b/drivers/media/platform/Makefile
+@@ -79,4 +79,16 @@ obj-$(CONFIG_VIDEO_QCOM_CAMSS)		+= qcom/camss/
+ 
+ obj-$(CONFIG_VIDEO_QCOM_VENUS)		+= qcom/venus/
+ 
++obj-$(CONFIG_RTK_HDMITX)		+= rtk_hdmitx/
++
++obj-$(CONFIG_RTK_HDCP_1x)		+= rtk_hdcptx/
++
++obj-$(CONFIG_RTK_HDMI_CEC)		+= rtk-cec/
++
++obj-$(CONFIG_RTK_DSI)			+= rtk_dsi/
++
++obj-$(CONFIG_RTK_HDCP_1x)		+= rtk_hdcptx/
++
++obj-$(CONFIG_RTK_TPDEMUX)		+= rtk_tpdemux/
++
+ obj-y					+= sunxi/
+-- 
+2.17.1
+

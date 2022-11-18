@@ -1,0 +1,24 @@
+#Copyright (C) 2017 Realtek Semiconductor Corporation
+
+config RTK_HDMITX
+	tristate "HDMITX for Realtek platform"
+	select I2C
+	select SWITCH
+	select RTK_HDMI_CEC
+    select RTK_RPC
+	default n
+	help
+	  Say Y, if you want to enable HDMITX feature on Realtek platform.
+
+choice
+	prompt "RTK HDMI model"
+	depends on RTK_HDMITX
+	default RTK_HDMI_RTD16XXB
+
+config RTK_HDMI_RTD13XX
+	bool "RTD13xx"
+
+config RTK_HDMI_RTD16XXB
+	bool "RTD16xxb"
+
+endchoice

@@ -1,0 +1,542 @@
+From 7df2b9e48a20814f8fac88f3e2d93d561435c792 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:45:18 +0800
+Subject: [PATCH 50/54] 831: usb: misc: Add test for USB_PATCH_ON_RTK
+
+---
+ drivers/usb/misc/Kconfig   |  10 +
+ drivers/usb/misc/Makefile  |   2 +
+ drivers/usb/misc/usbtest.c | 418 +++++++++++++++++++++++++++++++++++++
+ 3 files changed, 430 insertions(+)
+
+Index: linux-5.10.109/drivers/usb/misc/Kconfig
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/misc/Kconfig
++++ linux-5.10.109/drivers/usb/misc/Kconfig
+@@ -275,3 +275,13 @@ config USB_CHAOSKEY
+ 
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called chaoskey.
++
++config USB_FTDI_SPI
++       tristate "Realtek Energy Probe Kit Support"
++       depends on USB
++       default y
++       help
++         Support Realtek energy probe kit, need usb and board.
++	 Can get Voltage and current data and infomation summary
++	 by /dev/ftdi_spi_device_*.
++	 Future are support SPI mode function.
+Index: linux-5.10.109/drivers/usb/misc/Makefile
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/misc/Makefile
++++ linux-5.10.109/drivers/usb/misc/Makefile
+@@ -31,3 +31,5 @@ obj-$(CONFIG_USB_CHAOSKEY)		+= chaoskey.
+ 
+ obj-$(CONFIG_USB_SISUSBVGA)		+= sisusbvga/
+ obj-$(CONFIG_USB_LINK_LAYER_TEST)	+= lvstest.o
++
++obj-$(CONFIG_USB_FTDI_SPI)		+= ftdi-spi.o
+Index: linux-5.10.109/drivers/usb/misc/usbtest.c
+===================================================================
+--- linux-5.10.109.orig/drivers/usb/misc/usbtest.c
++++ linux-5.10.109/drivers/usb/misc/usbtest.c
+@@ -10,6 +10,9 @@
+ #include <linux/mutex.h>
+ #include <linux/timer.h>
+ #include <linux/usb.h>
++#ifdef CONFIG_USB_PATCH_ON_RTK
++#include <asm/div64.h>
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 
+ #define SIMPLE_IO_TIMEOUT	10000	/* in milliseconds */
+ 
+@@ -1652,6 +1655,9 @@ static int verify_halted(struct usbtest_
+ {
+ 	int	retval;
+ 	u16	status;
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	int	expected = -EPIPE;
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 
+ 	/* should look and act halted */
+ 	retval = usb_get_std_status(urb->dev, USB_RECIP_ENDPOINT, ep, &status);
+@@ -1667,9 +1673,18 @@ static int verify_halted(struct usbtest_
+ 	retval = simple_io(tdev, urb, 1, 0, -EPIPE, __func__);
+ 	if (retval != -EPIPE)
+ 		return -EINVAL;
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	if (testdev_to_usbdev(tdev)->speed == USB_SPEED_SUPER) {
++		expected = -71;
++	}
++	retval = simple_io(tdev, urb, 1, 0, expected, "verify_still_halted");
++	if (retval != expected)
++		return -EINVAL;
++#else
+ 	retval = simple_io(tdev, urb, 1, 0, -EPIPE, "verify_still_halted");
+ 	if (retval != -EPIPE)
+ 		return -EINVAL;
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 	return 0;
+ }
+ 
+@@ -1755,6 +1770,16 @@ static int halt_simple(struct usbtest_de
+ 	struct urb		*urb;
+ 	struct usb_device	*udev = testdev_to_usbdev(dev);
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++	retval = set_altsetting(dev, dev->info->alt);
++	if (retval) {
++		ERROR(dev,
++			"set altsetting to %d failed, %d\n",
++			dev->info->alt, retval);
++		return retval;
++	}
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ 	if (udev->speed == USB_SPEED_SUPER)
+ 		urb = simple_alloc_urb(udev, 0, 1024, 0);
+ 	else
+@@ -1773,7 +1798,15 @@ static int halt_simple(struct usbtest_de
+ 	if (dev->out_pipe) {
+ 		ep = usb_pipeendpoint(dev->out_pipe);
+ 		urb->pipe = dev->out_pipe;
++#ifdef CONFIG_USB_PATCH_ON_RTK
++		if (udev->speed == USB_SPEED_SUPER)
++			urb->transfer_buffer_length = 512;
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 		retval = test_halt(dev, ep, urb);
++#ifdef CONFIG_USB_PATCH_ON_RTK
++		if (udev->speed == USB_SPEED_SUPER)
++			urb->transfer_buffer_length = 1024;
++#endif /* CONFIG_USB_PATCH_ON_RTK */
+ 	}
+ done:
+ 	simple_free_urb(urb);
+@@ -2175,6 +2208,407 @@ static int test_unaligned_bulk(
+ 	return retval;
+ }
+ 
++#ifdef CONFIG_USB_PATCH_ON_RTK
++static u64 test_bulk_simple(struct usbtest_dev *dev,
++	   int pipe, int len, int sglen)
++{
++	struct usb_device	*udev = testdev_to_usbdev(dev);
++	struct urb		**urb;
++	int			i;
++	u64			retval = 0;
++	struct completion	completion;
++	unsigned long		expire;
++	struct timespec64 start;
++	struct timespec64 end;
++	struct timespec64 duration;
++	u64 time;
++
++	/* one round test for sglen*length */
++
++	if (usb_pipein(pipe)) {
++		unsigned maxpacket = get_maxpacket(udev, pipe);
++
++		if (len % maxpacket) {
++			ERROR(dev, "%s: for bulk-in endpoint len=%d != maxpacket=%d\n",
++				    __func__, len, maxpacket);
++			return -EINVAL;
++		}
++	}
++
++	/* allocate and init the urbs we'll queue.
++	 * as with bulk/intr sglists, sglen is the queue depth; it also
++	 * controls which subtests run (more tests than sglen) or rerun.
++	 */
++	urb = kcalloc(sglen, sizeof(struct urb *), GFP_KERNEL);
++	if (!urb) {
++		ERROR(dev, "urb kcalloc fail\n");
++		return -ENOMEM;
++	}
++
++	for (i = 0; i < sglen; i++) {
++		urb[i] = usbtest_alloc_urb(udev, pipe, len, 0, 0,
++			0, simple_callback);
++		if (!urb[i]) {
++			retval = -ENOMEM;
++			ERROR(dev, "simple_alloc_urb fail retval=%lld\n", retval);
++			goto cleanup;
++		}
++	}
++
++	ktime_get_ts64(&start);
++
++	/* submit the urbs */
++	for (i = 0; i < sglen; i++) {
++		urb[i]->context = &completion;
++		init_completion(&completion);
++
++		retval = usb_submit_urb(urb[i], GFP_ATOMIC);
++		if (retval != 0) {
++			ERROR(dev, "can't submit urb[%d], retval=%lld\n",
++					i, retval);
++			break;
++		}
++
++		expire = msecs_to_jiffies(SIMPLE_IO_TIMEOUT);
++		if (!wait_for_completion_timeout(&completion, expire)) {
++			usb_kill_urb(urb[i]);
++			retval = (urb[i]->status == -ENOENT ?
++				  -ETIMEDOUT : urb[i]->status);
++			ERROR(dev, "wait_for_completion_timeout urb[%d], retval=%lld\n",
++					i, retval);
++		} else {
++			retval = urb[i]->status;
++		}
++		if (retval != 0) {
++			ERROR(dev, "submit urb[%d], get error status retval=%lld\n",
++					i, retval);
++			break;
++		}
++	}
++
++	ktime_get_ts64(&end);
++	duration = timespec64_sub(end, start);
++	time = (duration.tv_sec * USEC_PER_SEC) + (duration.tv_nsec / NSEC_PER_USEC);
++	if (!retval)
++		retval = time;
++
++cleanup:
++	for (i = 0; i < sglen; i++) {
++		if (!urb[i])
++			continue;
++		urb[i]->dev = udev;
++		simple_free_urb(urb[i]);
++	}
++	kfree(urb);
++	return retval;
++}
++
++static u64 test_bulk_queue(struct usbtest_dev *dev,
++	    int pipe, int len, int sglen)
++{
++	struct usb_device	*udev = testdev_to_usbdev(dev);
++	struct scatterlist	*sg;
++	struct usb_sg_request	req;
++	struct sg_timeout	timeout = {
++		.req = &req,
++	};
++
++	u64	retval = 0;
++	struct timespec64 start;
++	struct timespec64 end;
++	struct timespec64 duration;
++	u64 time;
++
++	sg = alloc_sglist(sglen, len,
++			0, dev, pipe);
++	if (!sg) {
++		retval = -ENOMEM;
++		return retval;
++	}
++
++	timer_setup_on_stack(&timeout.timer, sg_timeout, 0);
++
++	retval = usb_sg_init(&req, udev, pipe,
++			(udev->speed == USB_SPEED_HIGH)
++				? (INTERRUPT_RATE << 3)
++				: INTERRUPT_RATE,
++			sg, sglen, 0, GFP_KERNEL);
++
++	if (retval)
++		goto out;
++
++	ktime_get_ts64(&start);
++
++	mod_timer(&timeout.timer, jiffies +
++			msecs_to_jiffies(SIMPLE_IO_TIMEOUT));
++	usb_sg_wait(&req);
++	if (!del_timer_sync(&timeout.timer))
++		retval = -ETIMEDOUT;
++	else
++		retval = req.status;
++
++	ktime_get_ts64(&end);
++	duration = timespec64_sub(end, start);
++	time = (duration.tv_sec * USEC_PER_SEC) + (duration.tv_nsec / NSEC_PER_USEC);
++	if (!retval)
++		retval = time;
++
++	destroy_timer_on_stack(&timeout.timer);
++
++out:
++	free_sglist(sg, sglen);
++
++	return retval;
++}
++
++
++enum TEST_BULK_TYPE {
++	TEST_BULK_SIMPLE = 0,
++	TEST_BULK_QUEUE = 1,
++};
++
++static u64 test_bulk_run(struct usbtest_dev *dev, enum TEST_BULK_TYPE type,
++	    int pipe, int len, int sglen)
++{
++	u64 data_size;
++	u64 speed;
++	u64 time;
++	u64 retval = -EINVAL;
++
++	data_size = sglen * len;
++
++	switch (type) {
++	case TEST_BULK_SIMPLE:
++		retval = test_bulk_simple(dev, pipe, len, sglen);
++		break;
++	case TEST_BULK_QUEUE:
++		retval = test_bulk_queue(dev, pipe, len, sglen);
++		break;
++	default:
++		retval = -EINVAL;
++		break;
++	}
++	if (retval < 0) {
++		dev_err(&(dev)->intf->dev,
++			    "TEST fail return (retval=%lld)\n", retval);
++		return (u64)retval;
++	}
++
++	time = retval;
++	speed = (data_size * USEC_PER_SEC);
++	do_div(speed, time);
++
++	dev_dbg(&(dev)->intf->dev,
++		    "TEST %llu bytes time=%dus speed %lld Byte/s\n",
++		    data_size, (int)time, speed);
++
++	return speed;
++}
++
++struct pipe_context {
++	struct work_struct out_work;
++	struct work_struct in_work;
++
++	struct usbtest_dev *tdev;
++	struct usbtest_param_32 *param;
++	enum TEST_BULK_TYPE type;
++
++	spinlock_t lock;
++
++	struct completion out_completion;
++	struct completion in_completion;
++	u64 in_speed;
++	u64 out_speed;
++};
++
++static void test_bulk_out_work(struct work_struct *work)
++{
++	struct pipe_context *pipe_ctx = container_of(work,
++		    struct pipe_context, out_work);
++	struct usbtest_dev *dev = pipe_ctx->tdev;
++	struct usbtest_param_32 *param = pipe_ctx->param;
++	enum TEST_BULK_TYPE type = pipe_ctx->type;
++	int pipe = dev->out_pipe;
++	u64 speed;
++	unsigned long		flags;
++
++	speed = test_bulk_run(dev, type, pipe, param->length, param->sglen);
++
++	spin_lock_irqsave(&pipe_ctx->lock, flags);
++
++	pipe_ctx->out_speed = speed;
++	complete(&pipe_ctx->out_completion);
++
++	spin_unlock_irqrestore(&pipe_ctx->lock, flags);
++}
++
++static void test_bulk_in_work(struct work_struct *work)
++{
++	struct pipe_context *pipe_ctx = container_of(work,
++		    struct pipe_context, in_work);
++	struct usbtest_dev *dev = pipe_ctx->tdev;
++	struct usbtest_param_32 *param = pipe_ctx->param;
++	enum TEST_BULK_TYPE type = pipe_ctx->type;
++	int pipe = dev->in_pipe;
++	u64 speed;
++	unsigned long		flags;
++
++	speed = test_bulk_run(dev, type, pipe, param->length, param->sglen);
++
++	spin_lock_irqsave(&pipe_ctx->lock, flags);
++
++	pipe_ctx->in_speed = speed;
++	complete(&pipe_ctx->in_completion);
++
++	spin_unlock_irqrestore(&pipe_ctx->lock, flags);
++}
++
++static int __test_bulk_performance(struct usbtest_dev *dev,
++	    struct usbtest_param_32 *param, enum TEST_BULK_TYPE type)
++{
++	u64 in_speed_avg, out_speed_avg;
++	int count = param->iterations;
++	int i;
++	char type_simple[] = "simple";
++	char type_queue[] = "queue";
++	char *type_str;
++
++	switch (type) {
++	case TEST_BULK_SIMPLE:
++		type_str = type_simple;
++		break;
++	case TEST_BULK_QUEUE:
++		type_str = type_queue;
++		break;
++	default:
++		type_str = NULL;
++		break;
++	}
++
++	/* OUT test */
++	out_speed_avg = 0;
++	for (i = 0; i < count; i++) {
++		u64 speed;
++
++		speed = test_bulk_run(dev, type, dev->out_pipe,
++			    param->length, param->sglen);
++		dev_dbg(&(dev)->intf->dev,
++			    "TEST %s urb for OUT:#%d write %u bytes speed %lld Byte/s\n",
++			    type_str, i, param->length * param->sglen, speed);
++
++		out_speed_avg += speed;
++	}
++	do_div(out_speed_avg, count);
++	/* report average performance */
++	dev_info(&(dev)->intf->dev,
++		    "TEST %s urb for OUT: write speed %lld Byte/s (%lld MB/s) (%lld MiB/s)\n",
++		    type_str, out_speed_avg, out_speed_avg / (1000 * 1000),
++		    out_speed_avg / (1024 * 1024));
++
++	/* IN test */
++	in_speed_avg = 0;
++	for (i = 0; i < count; i++) {
++		u64 speed;
++
++		speed = test_bulk_run(dev, type, dev->in_pipe,
++			    param->length, param->sglen);
++		dev_dbg(&(dev)->intf->dev,
++			    "TEST %s urb for IN:#%d read %u bytes speed %lld Byte/s\n",
++			    type_str, i, param->length * param->sglen, speed);
++
++		in_speed_avg += speed;
++	}
++	do_div(in_speed_avg, count);
++	/* report average performance */
++	dev_info(&(dev)->intf->dev,
++		    "TEST %s urb for IN: read speed %lld Byte/s (%lld MB/s) (%lld MiB/s)\n",
++		    type_str, in_speed_avg, in_speed_avg / (1000 * 1000),
++		    in_speed_avg / (1024 * 1024));
++
++	/* IN and OUT test */
++	out_speed_avg = 0;
++	in_speed_avg = 0;
++	for (i = 0; i < count; i++) {
++		struct pipe_context pipe_ctx;
++		unsigned long		expire;
++
++		pipe_ctx.tdev = dev;
++		pipe_ctx.param = param;
++		pipe_ctx.type = type;
++
++		spin_lock_init(&pipe_ctx.lock);
++		init_completion(&pipe_ctx.out_completion);
++		init_completion(&pipe_ctx.in_completion);
++
++		INIT_WORK(&pipe_ctx.out_work, test_bulk_out_work);
++		INIT_WORK(&pipe_ctx.in_work, test_bulk_in_work);
++
++		schedule_work(&pipe_ctx.in_work);
++		schedule_work(&pipe_ctx.out_work);
++
++		expire = msecs_to_jiffies(SIMPLE_IO_TIMEOUT);
++		if (!wait_for_completion_timeout(
++			    &pipe_ctx.out_completion, expire)) {
++			ERROR(dev, "wait_for_completion_timeout out_completion\n");
++
++		}
++		if (!wait_for_completion_timeout(
++			    &pipe_ctx.in_completion, expire)){
++			ERROR(dev, "wait_for_completion_timeout in_completion\n");
++		}
++
++		dev_dbg(&(dev)->intf->dev,
++			    "TEST %s urb for IN/OUT:#%d write %u bytes speed %lld Byte/s\n",
++			    type_str, i, param->length * param->sglen,
++			    pipe_ctx.out_speed);
++		dev_dbg(&(dev)->intf->dev,
++			    "TEST %s urb for IN/OUT:#%d read %u bytes speed %lld Byte/s\n",
++			    type_str, i, param->length * param->sglen,
++			    pipe_ctx.in_speed);
++
++		out_speed_avg += pipe_ctx.out_speed;
++		in_speed_avg += pipe_ctx.in_speed;
++	}
++	do_div(out_speed_avg, count);
++	do_div(in_speed_avg, count);
++	/* report average performance */
++	dev_info(&(dev)->intf->dev,
++		    "TEST %s urb for IN/OUT: write speed %lld Byte/s (%lld MB/s) (%lld MiB/s)\n",
++		    type_str, out_speed_avg, out_speed_avg / (1000 * 1000),
++		    out_speed_avg / (1024 * 1024));
++	dev_info(&(dev)->intf->dev,
++		    "TEST %s urb for IN/OUT: read speed %lld Byte/s (%lld MB/s) (%lld MiB/s)\n",
++		    type_str, in_speed_avg, in_speed_avg / (1000 * 1000),
++		    in_speed_avg / (1024 * 1024));
++
++	return 0;
++}
++
++static int
++test_bulk_performance(struct usbtest_dev *dev, struct usbtest_param_32 *param)
++{
++	int retval;
++
++	/* simple urb case */
++	retval = __test_bulk_performance(dev, param, TEST_BULK_SIMPLE);
++	if (retval < 0) {
++		ERROR(dev, "test_bulk_simple_performance fail (retval=%d)\n",
++			    retval);
++		return retval;
++	}
++
++	/* queue urb case */
++	retval = __test_bulk_performance(dev, param, TEST_BULK_QUEUE);
++	if (retval < 0) {
++		ERROR(dev, "test_bulk_queue_performance fail (retval=%d)\n",
++			    retval);
++		return retval;
++	}
++
++	return retval;
++}
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ /* Run tests. */
+ static int
+ usbtest_do_ioctl(struct usb_interface *intf, struct usbtest_param_32 *param)
+@@ -2205,6 +2639,18 @@ usbtest_do_ioctl(struct usb_interface *i
+ 	case 0:
+ 		dev_info(&intf->dev, "TEST 0:  NOP\n");
+ 		retval = 0;
++
++#ifdef CONFIG_USB_PATCH_ON_RTK
++		if (dev->in_pipe == 0 || dev->out_pipe == 0 ||
++			    param->iterations == 0 || param->sglen == 0 ||
++			    param->length == 0)
++			break;
++		dev_info(&intf->dev,
++			"TEST: bulk read/write performance test (%d rounds %d Bytes)\n",
++			param->iterations, param->sglen * param->length);
++		retval = test_bulk_performance(dev, param);
++#endif /* CONFIG_USB_PATCH_ON_RTK */
++
+ 		break;
+ 
+ 	/* Simple non-queued bulk I/O tests */

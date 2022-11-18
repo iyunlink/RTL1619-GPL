@@ -1,0 +1,24 @@
+Realtek CRT Driver DT-binding document
+======================================
+
+Required properties:
+
+- compatible: should contain "syscon", "simple-mfd" and one of the following,
+	"realtek,rtd1295-crt",
+	"realtek,rtd1395-crt",
+	"realtek,rtd1619-crt",
+	"realtek,rtd1319-crt".
+
+- reg: address of CRT.
+
+Example:
+
+	crt: crt@98000000 {
+		reg = <0x0 0x98000000 0x0 0x1000>;
+		compatible = "realtek,rtd1319-crt", "syscon", "simple-mfd";
+		ranges = <0x0 0x0 0x0 0x98000000 0x0 0x1000>;
+		#address-cells = <2>;
+		#size-cells = <2>;
+	};
+
+

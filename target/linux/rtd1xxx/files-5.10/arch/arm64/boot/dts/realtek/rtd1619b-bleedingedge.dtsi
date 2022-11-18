@@ -1,0 +1,642 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2020 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/regulator/anpec,apw888x.h>
+#include <dt-bindings/soc/realtek,pm.h>
+#include <dt-bindings/thermal/thermal.h>
+#include "rtd16xxb.dtsi"
+
+/ {
+	chosen {
+		stdout-path = "serial0:460800n8";
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,460800 init=/init loop.max_part=7 androidboot.storage=emmc androidboot.hardware=stark loglevel=4 NO_RESERVE";
+	};
+
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		rtc0 = &sw_rtc;
+	};
+
+	sw_rtc: sw-rtc {
+		compatible = "realtek,emulated-rtc";
+	};
+};
+
+&audio_in_i2s {
+	pinctrl-names = "default";
+	pinctrl-0 = <&ai_loc0_6pins>;
+	status = "disabled";
+};
+
+&audio_out {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spdif_pins>;
+	audio-gpios = <&gpio 47 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&cec {
+	status = "okay";
+};
+
+&cp {
+	status = "okay";
+};
+
+&cpu0 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu1 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu2 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu3 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu_dvfs {
+	fss,opp-updated = <0>;
+	fss,volt-correct = <25000>;
+	fss,volt-step = <25000>;
+	fss,volt-min = <775000>;
+	fss,volt-max = <1087500>;
+
+	bsv,opp-updated = <0>;
+	bsv,volt-correct = <150000 175000>;
+	bsv,volt-step = <25000>;
+	bsv,volt-min = <800000>;
+	bsv,volt-max = <1087500>;
+
+	cpu_opps: opp-table-cpu {
+		compatible = "operating-points-v2";
+		opp-shared;
+		opp1000: opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <800000>;
+			opp-microvolt-bsv = <0>;
+			opp-microvolt-fss = <0>;
+			clock-latency-ns = <150000>;
+			status = "disabled";
+		};
+
+		opp1100: opp-1100000000 {
+			opp-hz = /bits/ 64 <1100000000>;
+			opp-microvolt = <825000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1200: opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <850000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1300: opp-1300000000 {
+			opp-hz = /bits/ 64 <1300000000>;
+			opp-microvolt = <875000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1400: opp-1400000000 {
+			opp-hz = /bits/ 64 <1400000000>;
+			opp-microvolt = <900000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1500: opp-1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <937500>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1600: opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <987500>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1700: opp-1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <1037500>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
+			status = "okay";
+		};
+	};
+};
+
+&cpu_thermal {
+	trips {
+		cpu_alert0: cpu-alert0 {
+			temperature = <90000>;
+			hysteresis = <0>;
+			type = "passive";
+		};
+
+		cpu_alert1: cpu-alert1 {
+			temperature = <105000>;
+			hysteresis = <0>;
+			type = "passive";
+		};
+	};
+
+	cooling-maps {
+		cpu-map0 {
+			trip = <&cpu_alert0>;
+			cooling-device = <&cpu0 2 3>;
+			contribution = <70>;
+		};
+
+		cpu-map1 {
+			trip = <&cpu_alert1>;
+			cooling-device = <&cpu0 4 THERMAL_NO_LIMIT>;
+			contribution = <70>;
+		};
+	};
+};
+
+&cpu_tm {
+	status = "okay";
+};
+
+&dbgprot {
+	status = "okay";
+};
+
+&emmc {
+	status = "okay";
+};
+
+&gpio {
+	status = "okay";
+};
+
+&gpu {
+	operating-points-v2 = <&gpu_opps>;
+	status = "okay";
+
+	gpu_opps: opp-table-gpu {
+		compatible = "operating-points-v2",
+			     "operating-points-v2-mali";
+
+		opp-450000000 {
+			opp-hz = /bits/ 64 <450000000>;
+			opp-hz-real = /bits/ 64 <450000000>;
+			opp-microvolt = <800000>;
+			opp-suspend;
+		};
+
+		opp-550000000 {
+			opp-hz = /bits/ 64 <550000000>;
+			opp-hz-real = /bits/ 64 <550000000>;
+			opp-microvolt = <800000>;
+		};
+
+		opp-650000000 {
+			opp-hz = /bits/ 64 <650000000>;
+			opp-hz-real = /bits/ 64 <650000000>;
+			opp-microvolt = <800000>;
+		};
+
+		opp-702000000 {
+			opp-hz = /bits/ 64 <702000000>;
+			opp-hz-real = /bits/ 64 <702000000>;
+			opp-microvolt = <800000>;
+		};
+	};
+};
+
+&hdcptx {
+	status = "okay";
+};
+
+&hdmitx {
+	status = "okay";
+};
+
+&hse {
+	status = "okay";
+};
+
+&i2c_0 {
+	clock-frequency = <3400000>;
+	pinctrl-0 = <&i2c_pins_0_HS>;
+	status = "okay";
+
+	apw7899: apw7899@12 {
+		compatible = "anpec,apw7899";
+		reg = <0x12>;
+
+		regulators {
+			compatible = "anpec,apw8886-regulator";
+
+			vd33_supp: dc1 {
+				regulator-name = "vd33";
+				regulator-min-microvolt = <2200000>;
+				regulator-max-microvolt = <3777500>;
+
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
+				regulator-state-mem {
+					regulator-on-in-suspend;
+					regulator-suspend-microvolt = <3300000>;
+				};
+			};
+
+			core_supp: dc2 {
+				regulator-name = "core";
+				regulator-min-microvolt = <550000>;
+				regulator-max-microvolt = <1337500>;
+
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
+				regulator-state-mem {
+					regulator-on-in-suspend;
+					regulator-suspend-microvolt = <800000>;
+				};
+			};
+
+			cpu_supp: dc3 {
+				regulator-name = "cpudvs";
+				regulator-min-microvolt = <550000>;
+				regulator-max-microvolt = <1337500>;
+
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
+				regulator-ramp-delay = <625>;
+				regulator-state-mem {
+					regulator-off-in-suspend;
+					regulator-changeable-in-suspend;
+				};
+				regulator-state-shutdown {
+					regulator-off-in-suspend;
+				};
+			};
+
+			vd18_supp: dc4 {
+				regulator-name = "vd18";
+				regulator-min-microvolt = <800000>;
+				regulator-max-microvolt = <2060000>;
+
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
+				regulator-state-mem {
+					regulator-on-in-suspend;
+				};
+			};
+
+			ddr_supp: dc5 {
+				regulator-name = "ddr";
+				regulator-min-microvolt = <1200000>;
+				regulator-max-microvolt = <1200000>;
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
+				regulator-state-mem {
+					regulator-on-in-suspend;
+				};
+
+				regulator-state-shutdown {
+					regulator-off-in-suspend;
+				};
+			};
+
+			vd25_supp: ldo1 {
+				regulator-name = "vd25";
+				regulator-min-microvolt = <1780000>;
+				regulator-max-microvolt = <3020000>;
+
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-initial-mode = <APW888X_LDO_MODE_NORMAL>;
+				regulator-state-mem {
+					regulator-on-in-suspend;
+				};
+			};
+
+			vfb5 {
+				regulator-name = "vfb5";
+				regulator-min-microvolt = <512500>;
+				regulator-max-microvolt = <700000>;
+
+				regulator-boot-on;
+				regulator-always-on;
+				regulator-state-mem {
+					regulator-on-in-suspend;
+				};
+			};
+		};
+	};
+};
+
+&i2c_1 {
+	status = "okay";
+};
+
+&i2c_3 {
+	status = "okay";
+};
+
+&i2c_4 {
+	status = "okay";
+};
+
+&i2c_5 {
+	status = "okay";
+};
+
+&irda {
+	wakeup-key = <116>,<148>;
+	status = "okay";
+};
+
+&iso {
+	rtc-reload@64c {
+		compatible = "realtek,rtc-reload";
+		reg = <0x64c 0x4>;
+		status = "okay";
+	};
+};
+
+&jpeg {
+	status = "okay";
+};
+
+&nic {
+	status = "okay";
+};
+
+&pcie1 {
+	status = "okay";
+};
+
+&pcie1_phy {
+	status = "okay";
+};
+
+&pcie2 {
+	status = "okay";
+};
+
+&pcie2_phy {
+	status = "okay";
+};
+
+&pwm {
+	status = "disabled";
+};
+
+&pwr_ve1 {
+	assigned-clock-rates = <540000000>;
+};
+
+&dpi {
+	status = "okay";
+
+	zq-cal {
+		status = "okay";
+	};
+};
+
+&reboot_mode {
+	status = "okay";
+};
+
+&rfkill {
+	rfkill-gpios = <&gpio 6 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&lsadc {
+	status = "okay";
+};
+
+&rng {
+	status = "okay";
+};
+
+&rtk_avcpu {
+	status = "okay";
+};
+
+&rtk_fw_pm {
+	status = "okay";
+};
+
+&rtk_pm {
+	wakeup-flags = <NORMAL_MODE>;
+	wakeup-gpio-list = <2 GPIO_WAKEUP_ENABLE GPIO_WAKEUP_ACTIVE_LOW>,
+			   <4 GPIO_WAKEUP_ENABLE GPIO_WAKEUP_ACTIVE_LOW>,
+			   <26 GPIO_WAKEUP_ENABLE GPIO_WAKEUP_ACTIVE_LOW>;
+	wakeup-timer = <0>;
+	dco = <DCO_DISABLE>;
+	status = "okay";
+};
+
+&sb2_inv {
+	status = "okay";
+};
+
+&sd {
+	status = "okay";
+};
+
+&sdio {
+	bus-width = <4>;
+	non-removable;
+	cap-sd-highspeed;
+	cap-mmc-highspeed;
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
+	keep-power-in-suspend;
+	enable-sdio-wakeup;
+	no-sd;
+	no-mmc;
+	status = "okay";
+};
+
+&sound {
+	status = "okay";
+};
+
+&tp {
+	status = "okay";
+};
+
+&usb_port0_usb2phy {
+	status = "okay";
+};
+
+&usb_port0 {
+	status = "okay";
+};
+
+&usb_port1_usb2phy {
+	status = "okay";
+};
+
+&usb_port1 {
+	status = "okay";
+};
+
+&usb_port2_usb2phy {
+	status = "okay";
+};
+
+&usb_port2_usb3phy {
+	status = "okay";
+};
+
+&usb_port2 {
+	status = "okay";
+};
+
+&type_c {
+	status = "okay";
+
+	dwc3_rtk = <&usb_port2>;
+};
+
+/* debug console (J1) */
+&uart0 {
+	status = "okay";
+};
+
+/* M.2 slot (CON2) */
+&uart1 {
+	status = "okay";
+};
+
+&uart2 {
+	status = "okay";
+};
+
+&usb_manager {
+	status = "okay";
+
+	gpio0 {
+		realtek,power-gpio = <&gpio 48 GPIO_ACTIVE_HIGH>;
+		power_low_active;
+	};
+
+	gpio1 {
+		realtek,power-gpio = <&gpio 49 GPIO_ACTIVE_HIGH>;
+		power_low_active;
+	};
+
+	rtk_usb {
+		type_c {
+			realtek,plug_side_switch-gpio = <&gpio 53 GPIO_ACTIVE_HIGH>;
+		};
+	};
+};
+
+&vcpu {
+	status = "okay";
+};
+
+&ve3vcpu {
+	status = "disabled";
+};
+
+&ve1 {
+	status = "okay";
+};
+
+&watchdog {
+	status = "okay";
+};
+
+&npu {
+	status = "okay";
+};
+
+&sata_phy {
+	status = "disabled";
+};
+
+&sata_phy0 {
+	tx-swing = <(-2)>, <(1)>, <(0)>; /* tx swing adjust sample : <gen1>, <gen2>, <gen3> */
+	/delete-property/ tx-swing;
+	tx-emphasis = <3>, <(-2)>, <(-3)>; /* tx emphasis adjust sample : <gen1>, <gen2>, <gen3> */
+	/delete-property/ tx-emphasis;
+	status = "disabled";
+};
+
+&sata_phy1 {
+	status = "disabled";
+};
+
+&ahci_sata {
+	status = "disabled";
+};
+
+&sata_port0 {
+	status = "disabled";
+};
+
+&sata_port1 {
+	status = "disabled";
+};
+
+&rtk_smcc {
+	status = "okay";
+};
+
+&pm_alarm {
+	status = "okay";
+};
+
+&rtk_ve3_uart {
+	status = "okay";
+};
+
+&pm_hifi {
+	hifi-supply = <&cpu_supp>;
+	status = "okay";
+};

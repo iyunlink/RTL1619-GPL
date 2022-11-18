@@ -1,0 +1,15 @@
+
+menu "Smart Crad Interface Support"
+
+config SMARTCARD
+	tristate "Smart Card Interface Support"
+	default n
+	help
+	  Say Y here if you want to support smart card on your platform 
+	
+source "drivers/soc/realtek/common/rtk_scd/core/Kconfig"
+
+source "drivers/soc/realtek/common/rtk_scd/adapter/Kconfig"
+
+endmenu
+	

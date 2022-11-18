@@ -1,0 +1,47 @@
+msgid "Enable"
+msgstr "開啟"
+
+msgid "Bandwidthd"
+msgstr "流量統計"
+
+msgid "Running"
+msgstr "執行中"
+
+msgid "Not running"
+msgstr "未啟動"
+
+msgid "dev"
+msgstr "監控網卡"
+
+msgid "subnets"
+msgstr "監控網段"
+
+msgid "skip_intervals"
+msgstr "更新時間"
+
+msgid "graph_cutoff"
+msgstr "圖形顯示流量cutoff(KB)"
+
+msgid "promiscuous"
+msgstr "無限制模式"
+
+msgid "output_cdf"
+msgstr "產生cdf格式數據"
+
+msgid "recover_cdf"
+msgstr "還原cdf格式數據"
+
+msgid "filter"
+msgstr "過濾條件"
+
+msgid "graph"
+msgstr "顯示圖形"
+
+msgid "Use Bandwidthd to get traffic status in a graphic way for specific subnets for each IP address"
+msgstr "透過 Bandwidthd 來顯示網段裡面每一個 IP 位址的流量"
+
+msgid "Status"
+msgstr "執行狀態"
+
+msgid "Web Interface"
+msgstr "網頁介面"

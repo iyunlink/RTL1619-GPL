@@ -1,0 +1,55 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2020-2021 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd1619b-bleedingedge.dtsi"
+
+/ {
+	compatible = "realtek,bleeding-edge-emmc", "realtek,rtd1619b";
+	model = "Realtek Bleeding Edge EVB eMMC (4GB)";
+
+	memory@40000 {
+		device_type = "memory";
+		reg = <0x00040000 0x7ffc0000>,
+		      <0x80020000 0x080e0000>,
+		      <0x8a100000 0x0defc000>,
+		      <0x98200000 0x00df0000>,
+		      <0x99000000 0x66000000>;
+	};
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,460800 uio_pdrv_genirq.of_id=generic-uio init=/sbin/init root=/dev/mmcblk0p1 rootfstype=squashfs rootwait loglevel=8 NO_RESERVE";
+	};
+
+};
+
+&cma_resrved_4 {
+	alloc-ranges=<0x00000000 0x60000000>;
+};
+
+&pcie1 {
+	status = "disabled";
+};
+
+&sata_phy {
+	status = "okay";
+};
+
+&sata_phy0 {
+	status = "okay";
+};
+
+&ahci_sata {
+	status = "okay";
+};
+
+&sata_port0 {
+	status = "okay";
+};
+
+&rtk_ve3_uart {
+	log_enable = <1>;
+};

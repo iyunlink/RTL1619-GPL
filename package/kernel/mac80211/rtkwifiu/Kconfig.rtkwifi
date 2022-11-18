@@ -1,0 +1,13 @@
+
+config RTKWIFIU
+	tristate "Realtek USB Wireless Cards"
+	depends on m
+	depends on CFG80211
+
+if RTKWIFIU
+
+source "drivers/net/wireless/realtek/rtkwifiu/rtl8822cs/Kconfig"
+source "drivers/net/wireless/realtek/rtkwifiu/rtl8852be/Kconfig"
+source "drivers/net/wireless/realtek/rtkwifiu/rtl8852bs/Kconfig"
+
+endif

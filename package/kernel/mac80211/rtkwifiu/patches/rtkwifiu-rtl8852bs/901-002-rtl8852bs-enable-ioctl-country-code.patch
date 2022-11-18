@@ -1,0 +1,10 @@
+--- a/drivers/net/wireless/realtek/rtkwifiu/rtl8852bs/include/drv_conf.h
++++ b/drivers/net/wireless/realtek/rtkwifiu/rtl8852bs/include/drv_conf.h
+@@ -542,6 +542,7 @@ power down etc.) in last time, we can un
+ 	#endif
+ #endif
+ 
++#define CONFIG_RTW_IOCTL_SET_COUNTRY
+ 
+ #ifdef DBG_CONFIG_ERROR_RESET
+ #ifndef CONFIG_IPS

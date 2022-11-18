@@ -1,0 +1,50 @@
+From 7ca1d9f71d99e644c59a42432e34e2f572fa1970 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:45:57 +0800
+Subject: [PATCH 51/54] 832: usb: phy: RTK_USBxPHY
+
+---
+ drivers/usb/phy/Kconfig  | 17 +++++++++++++++++
+ drivers/usb/phy/Makefile |  3 +++
+ 2 files changed, 20 insertions(+)
+
+diff --git a/drivers/usb/phy/Kconfig b/drivers/usb/phy/Kconfig
+index ef4787cd3..6adcd1b6a 100644
+--- a/drivers/usb/phy/Kconfig
++++ b/drivers/usb/phy/Kconfig
+@@ -192,4 +192,21 @@ config JZ4770_PHY
+ 	  This driver provides PHY support for the USB controller found
+ 	  on the JZ-series and X-series SoCs from Ingenic.
+ 
++config RTK_USB_RLE0599_PHY
++	tristate "Realtek USB RLE0599 PHY Controller Driver"
++	select USB_PHY
++	help
++	  Enable this to support Realtek RLE0599 phy controller SoC.
++
++config RTK_USB2PHY
++	tristate "Realtek USB2 PHY Controller Driver"
++	select USB_PHY
++	help
++	  Enable this to support Realtek USB2 phy controller SoC.
++
++config RTK_USB3PHY
++	tristate "Realtek USB3 PHY Controller Driver"
++	select USB_PHY
++	help
++	  Enable this to support Realtek USB3 phy controller SoC.
+ endmenu
+diff --git a/drivers/usb/phy/Makefile b/drivers/usb/phy/Makefile
+index b352bdbe8..8b23935ac 100644
+--- a/drivers/usb/phy/Makefile
++++ b/drivers/usb/phy/Makefile
+@@ -25,3 +25,6 @@ obj-$(CONFIG_USB_ULPI)			+= phy-ulpi.o
+ obj-$(CONFIG_USB_ULPI_VIEWPORT)		+= phy-ulpi-viewport.o
+ obj-$(CONFIG_KEYSTONE_USB_PHY)		+= phy-keystone.o
+ obj-$(CONFIG_JZ4770_PHY)		+= phy-jz4770.o
++obj-$(CONFIG_RTK_USB_RLE0599_PHY)	+= phy-rtk-rle0599.o
++obj-$(CONFIG_RTK_USB2PHY)		+= phy-rtk-usb2.o
++obj-$(CONFIG_RTK_USB3PHY)		+= phy-rtk-usb3.o
+-- 
+2.17.1
+

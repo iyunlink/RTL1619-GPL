@@ -1,0 +1,14 @@
+Realtek Reset Controller DT-bindings
+------------------------------------
+
+1. M2TMX reset controller
+
+Required properties
+
+- compatible: shall contain
+		"realtek,rtd1319-m2tmx-reset".
+
+- #reset-cells: shall be 1.
+
+- realtek,m2tmx: shall contain a phandle to m2tmx syscon
+

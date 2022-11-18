@@ -1,0 +1,8 @@
+Realtek Software-emulated Real-time Clock Driver DT-bindings
+============================================================
+
+Required properties:
+
+* compatible: shoull be "realtek,emulated-rtc".
+
+

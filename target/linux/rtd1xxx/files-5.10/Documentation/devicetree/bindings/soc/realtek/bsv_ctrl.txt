@@ -1,0 +1,58 @@
+Realtek BSV Controller for CPU DVFS dt-bindings
+===============================================
+
+Required properties:
+
+- compatible: should be "realtek,bsv-controller".
+
+- #clock-cells: should be 0.
+
+- clocks: cpu clock
+
+- cpu-supply: cpu supply
+
+- nvmem-cells: bsv data in otp
+
+- nvmem-cell-names: should be "bsv"
+
+
+See regulator/regulator.yaml for regulator bindings.
+
+Example:
+
+/ {
+        bsvc: bsv-ctrl {
+                compatible = "realtek,bsv-controller";
+                #clock-cells = <0>;
+                regulator-name = "bsv_cpudvs";
+                regulator-min-microvolt = <750000>;
+                regulator-max-microvolt = <1200000>;
+                regulator-boot-on;
+                regulator-always-on;
+                clocks = <&cc RTD1619B_CRT_PLL_SCPU>;
+                cpu-supply = <&cpu_supp>;
+                nvmem-cells = <&otp_bsv>;
+                nvmem-cell-names = "bsv";
+        };
+};
+
+&cpu0 {
+        clocks = <&bsvc>;
+        cpu-supply = <&bsvc>;
+};
+
+&cpu1 {
+        clocks = <&bsvc>;
+        cpu-supply = <&bsvc>;
+};
+
+&cpu2 {
+        clocks = <&bsvc>;
+        cpu-supply = <&bsvc>;
+};
+
+&cpu3 {
+        clocks = <&bsvc>;
+        cpu-supply = <&bsvc>;
+};
+

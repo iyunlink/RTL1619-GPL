@@ -1,0 +1,500 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2021 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/soc/realtek,pm.h>
+#include <dt-bindings/thermal/thermal.h>
+#include "rtd16xxb.dtsi"
+
+/ {
+	chosen {
+		stdout-path = "serial0:460800n8";
+	};
+
+	aliases {
+		serial0 = &uart0;
+		serial1 = &uart1;
+		serial2 = &uart2;
+		rtc0 = &sw_rtc;
+	};
+
+	sw_rtc: sw-rtc {
+		compatible = "realtek,emulated-rtc";
+	};
+
+	cpu_supp: pwm-regulator {
+		compatible = "pwm-regulator";
+		pinctrl-names = "default";
+		pinctrl-0 = <&pwm2_0_pins>;
+		pwms = <&pwm 2 8149>;
+		status = "okay";
+
+		regulator-name = "cpudvs";
+		regulator-min-microvolt = <750000>;
+		regulator-max-microvolt = <1200000>;
+		regulator-boot-on;
+		regulator-always-on;
+		regulator-ramp-delay = <400>;
+
+		voltage-table =
+			<1200000 0>,
+			<1187500 2>,
+			<1175000 5>,
+			<1162500 7>,
+			<1150000 10>,
+			<1137500 11>,
+			<1125000 14>,
+			<1112500 16>,
+			<1100000 19>,
+			<1087500 20>,
+			<1075000 23>,
+			<1062500 26>,
+			<1050000 28>,
+			<1037500 30>,
+			<1025000 32>,
+			<1012500 35>,
+			<1000000 37>,
+			<987500 40>,
+			<975000 41>,
+			<962500 44>,
+			<950000 47>,
+			<937500 49>,
+			<925000 50>,
+			<912500 53>,
+			<900000 55>,
+			<887500 58>,
+			<875000 60>,
+			<862500 62>,
+			<850000 64>,
+			<837500 67>,
+			<825000 70>,
+			<812500 71>,
+			<800000 74>,
+			<787500 76>,
+			<775000 79>,
+			<762500 80>,
+			<750000 83>;
+	};
+};
+
+&audio_out {
+	pinctrl-names = "default";
+	pinctrl-0 = <&spdif_pins>;
+	status = "okay";
+};
+
+&cec {
+	status = "okay";
+};
+
+&cp {
+	status = "okay";
+};
+
+&cpu0 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu1 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu2 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu3 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu_dvfs {
+	fss,opp-updated = <0>;
+	fss,volt-correct = <25000>;
+	fss,volt-step = <25000>;
+	fss,volt-min = <775000>;
+	fss,volt-max = <1087500>;
+
+	bsv,opp-updated = <0>;
+	bsv,volt-correct = <150000 175000>;
+	bsv,volt-step = <25000>;
+	bsv,volt-min = <800000>;
+	bsv,volt-max = <1087500>;
+
+	cpu_opps: opp-table-cpu {
+		compatible = "operating-points-v2";
+		opp-shared;
+		opp1000: opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <800000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1100: opp-1100000000 {
+			opp-hz = /bits/ 64 <1100000000>;
+			opp-microvolt = <825000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1200: opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <850000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1300: opp-1300000000 {
+			opp-hz = /bits/ 64 <1300000000>;
+			opp-microvolt = <875000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1400: opp-1400000000 {
+			opp-hz = /bits/ 64 <1400000000>;
+			opp-microvolt = <900000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1500: opp-1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <937500>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1600: opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <987500>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1700: opp-1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <1037500>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
+			status = "okay";
+		};
+	};
+};
+
+&cpu_thermal {
+	trips {
+		cpu_alert0: cpu-alert0 {
+			temperature = <90000>;
+			hysteresis = <0>;
+			type = "passive";
+		};
+
+		cpu_alert1: cpu-alert1 {
+			temperature = <105000>;
+			hysteresis = <0>;
+			type = "passive";
+		};
+	};
+
+	cooling-maps {
+		cpu-map0 {
+			trip = <&cpu_alert0>;
+			cooling-device = <&cpu0 THERMAL_NO_LIMIT 3>;
+			contribution = <70>;
+		};
+
+		cpu-map1 {
+			trip = <&cpu_alert1>;
+			cooling-device = <&cpu0 4 THERMAL_NO_LIMIT>;
+			contribution = <70>;
+		};
+	};
+};
+
+&cpu_tm {
+	status = "okay";
+};
+
+&emmc {
+	status = "okay";
+};
+
+&gpio {
+	status = "okay";
+};
+
+&gpu {
+	operating-points-v2 = <&gpu_opps>;
+	status = "okay";
+
+	gpu_opps: opp-table-gpu {
+		compatible = "operating-points-v2",
+			     "operating-points-v2-mali";
+
+		opp-450000000 {
+			opp-hz = /bits/ 64 <450000000>;
+			opp-hz-real = /bits/ 64 <450000000>;
+			opp-suspend;
+		};
+
+		opp-550000000 {
+			opp-hz = /bits/ 64 <550000000>;
+			opp-hz-real = /bits/ 64 <550000000>;
+		};
+
+		opp-650000000 {
+			opp-hz = /bits/ 64 <650000000>;
+			opp-hz-real = /bits/ 64 <650000000>;
+		};
+
+		opp-702000000 {
+			opp-hz = /bits/ 64 <702000000>;
+			opp-hz-real = /bits/ 64 <702000000>;
+		};
+	};
+};
+
+&hdcptx {
+	status = "okay";
+};
+
+&hdmitx {
+	hdmi-5v-gpios = <&gpio 47 GPIO_ACTIVE_HIGH>; /* HDMI_5V control pin */
+	status = "okay";
+};
+
+&hse {
+	status = "okay";
+};
+
+&i2c_0 {
+	status = "disabled";
+};
+
+&i2c_1 {
+	status = "okay";
+};
+
+&i2c_3 {
+	status = "okay";
+};
+
+&i2c_4 {
+	status = "okay";
+};
+
+&i2c_5 {
+	status = "okay";
+};
+
+&irda {
+	status = "okay";
+};
+
+&iso {
+	rtc-reload@64c {
+		compatible = "realtek,rtc-reload";
+		reg = <0x64c 0x4>;
+		status = "okay";
+	};
+};
+
+&jpeg {
+	status = "okay";
+};
+
+&nic {
+	status = "okay";
+};
+
+&pcie1 {
+	status = "okay";
+};
+
+&pcie1_phy {
+	status = "okay";
+};
+
+&pcie2 {
+	status = "disabled";
+};
+
+&pcie2_phy {
+	status = "disabled";
+};
+
+&pwm {
+	status = "okay";
+
+	pwm_2 {
+		enable = <1>;
+		clkout_div = <0x6d>;
+		clksrc_div = <0x00>;
+		duty_rate = <55>;
+	};
+};
+
+&reboot_mode {
+	status = "okay";
+};
+
+&rfkill {
+	rfkill-gpios = <&gpio 2 GPIO_ACTIVE_HIGH>;
+	status = "okay";
+};
+
+&lsadc {
+	status = "okay";
+};
+
+&rng {
+	status = "okay";
+};
+
+&rtk_fw_pm {
+	status = "okay";
+};
+
+&rtk_pm {
+	wakeup-flags = <NORMAL_MODE>;
+	wakeup-gpio-list = <2 0 0>,
+			   <4 0 0>;
+	wakeup-timer = <0>;
+	status = "okay";
+};
+
+&sb2_inv {
+	status = "okay";
+};
+
+&sd {
+	status = "okay";
+};
+
+&sound {
+	status = "okay";
+};
+
+&tp {
+	status = "okay";
+};
+
+&usb_port0_usb2phy {
+	status = "okay";
+};
+
+&usb_port0 {
+	status = "okay";
+};
+
+&usb_port1_usb2phy {
+	status = "okay";
+};
+
+&usb_port1 {
+	status = "okay";
+};
+
+&usb_port2_usb2phy {
+	status = "okay";
+};
+
+&usb_port2_usb3phy {
+	status = "disabled";
+};
+
+&usb_port2 {
+	status = "okay";
+	disable_usb3;
+
+	dwc3_u3drd@50000 {
+		snps,dev_force_20_clk_for_30_clk;
+		maximum-speed = "high-speed";
+	};
+};
+
+&type_c {
+	status = "okay";
+
+	dwc3_rtk = <&usb_port2>;
+
+	boot_check_time = <30000>; /*ms (At boot Device switch Host time)*/
+};
+
+/* debug console (J1) */
+&uart0 {
+	status = "okay";
+};
+
+/* J3 */
+&uart1 {
+	status = "okay";
+};
+
+&uart2 {
+	status = "okay";
+};
+
+&usb_manager {
+	status = "okay";
+
+	gpio0 {
+		realtek,power-gpio = <&gpio 48 GPIO_ACTIVE_HIGH>;
+		power_low_active;
+	};
+
+	port2 {
+		disable_usb3;
+	};
+
+	rtk_usb {
+		type_c {
+			realtek,connector_switch-gpio = <&gpio 49 GPIO_ACTIVE_HIGH>;
+		};
+	};
+
+};
+
+&vcpu {
+	status = "okay";
+};
+
+&ve3vcpu {
+	status = "okay";
+};
+
+&ve1 {
+	status = "okay";
+};
+
+&watchdog {
+	status = "okay";
+};

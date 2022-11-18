@@ -1,0 +1,135 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2019-2020 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd16xxb.dtsi"
+#include <dt-bindings/soc/realtek,pm.h>
+
+/ {
+	model = "Realtek Rescue";
+	compatible = "realtek,rescue", "realtek,rtd1619b";
+
+	memory@40000 {
+		device_type = "memory";
+		reg = <0x00040000 0x3ffc0000>; /* boot ROM to 1 GiB or 2 GiB */
+	};
+
+	chosen {
+		stdout-path = "serial0:460800n8";
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 init=/init NO_RESERVE";
+		linux,initrd-start = <0x03100000>;
+		linux,initrd-end = <0x03d00000>;
+	};
+};
+
+/* debug console (J1) */
+&uart0 {
+	status = "okay";
+};
+
+&gpio {
+	status = "okay";
+};
+
+&usb_manager {
+	status = "okay";
+
+	gpio0 {
+		realtek,power-gpio = <&gpio 48 GPIO_ACTIVE_HIGH>;
+		power_low_active;
+	};
+
+	gpio1 {
+		realtek,power-gpio = <&gpio 49 GPIO_ACTIVE_HIGH>;
+		power_low_active;
+	};
+
+	rtk_usb {
+		type_c {
+			realtek,plug_side_switch-gpio = <&gpio 53 GPIO_ACTIVE_HIGH>;
+		};
+	};
+};
+
+&usb_port0_usb2phy {
+	status = "okay";
+};
+
+&usb_port0 {
+	status = "okay";
+};
+
+&usb_port1_usb2phy {
+	status = "okay";
+};
+
+&usb_port1 {
+	status = "okay";
+};
+
+&usb_port2_usb2phy {
+	status = "okay";
+};
+
+&usb_port2_usb3phy {
+	status = "okay";
+};
+
+&usb_port2 {
+	status = "okay";
+};
+
+&type_c {
+	status = "okay";
+
+	dwc3_rtk = <&usb_port2>;
+};
+
+&emmc {
+	hs400_force_tuning = <0x1>;
+	status = "okay";
+};
+
+&cp {
+	status = "okay";
+};
+
+&psci {
+	status = "disabled";
+};
+
+&watchdog {
+	status = "okay";
+};
+
+&reboot_mode {
+	status = "okay";
+};
+
+&irda {
+	status = "okay";
+};
+
+&cma_resrved_3 {
+	status = "disabled";
+};
+
+&rtk_pm {
+	wakeup-flags = <NORMAL_MODE>;
+	wakeup-gpio-list = <2 GPIO_WAKEUP_ENABLE GPIO_WAKEUP_ACTIVE_LOW>,
+			   <4 GPIO_WAKEUP_ENABLE GPIO_WAKEUP_ACTIVE_LOW>,
+			   <26 GPIO_WAKEUP_ENABLE GPIO_WAKEUP_ACTIVE_LOW>;
+	wakeup-timer = <0>;
+	status = "okay";
+};
+
+&nic {
+	status = "okay";
+};
+
+&rtk_smcc {
+	status = "okay";
+};

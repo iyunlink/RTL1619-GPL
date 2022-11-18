@@ -1,0 +1,686 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2019-2020 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include <dt-bindings/clock/rtd1319-clk.h>
+#include <dt-bindings/regulator/anpec,apw888x.h>
+#include <dt-bindings/soc/realtek,pm.h>
+#include <dt-bindings/thermal/thermal.h>
+
+#include "rtd1312c.dtsi"
+
+/ {
+	compatible = "realtek,storm-breaker", "realtek,rtd1312c";
+	model = "Realtek Storm Breaker EVB";
+
+	memory@40000 {
+		device_type = "memory";
+		reg = <0x00040000 0x7ffc0000>; /* boot ROM to 1 GiB or 2 GiB */
+	};
+
+	chosen {
+		stdout-path = "serial0:460800n8";
+	};
+};
+
+/* debug console (J1) */
+&uart0 {
+	status = "okay";
+};
+
+/* M.2 slot (CON8) */
+&uart1 {
+	status = "disabled";
+};
+
+/* GPIO connector (T1) */
+&uart2 {
+	status = "disabled";
+};
+
+/* PMIC */
+&i2c_0 {
+	clock-frequency = <3400000>;
+	pinctrl-0 = <&i2c_pins_0_HS>;
+	status = "okay";
+
+	apw8886: apw8886@12 {
+		compatible = "anpec,apw8886";
+		reg = <0x12>;
+
+		regulators: regulators {
+			compatible = "anpec,apw8886-regulator";
+		};
+
+	};
+};
+
+&i2c_1 {
+	status = "okay";
+};
+
+&i2c_3 {
+	status = "okay";
+};
+
+&watchdog {
+	status = "okay";
+};
+
+&reboot_mode {
+	status = "okay";
+};
+
+&reboot {
+	status = "okay";
+};
+
+&irda {
+	status = "okay";
+};
+
+&gpio {
+	status = "okay";
+};
+
+&spi_0 {
+	status = "okay";
+};
+
+&pwm {
+	status = "okay";
+};
+
+&lsadc {
+	status = "okay";
+};
+
+&hdmitx {
+	status = "okay";
+};
+
+&hdcptx {
+	status = "okay";
+};
+
+&cec {
+	status = "okay";
+};
+
+&dpi {
+	temp-range = <40000 00000>;
+	status = "okay";
+
+	zq-cal {
+		status = "okay";
+	};
+
+	tx-phase {
+		ck-phase-ofs = <0xfffffff8>;
+		status = "okay";
+	};
+};
+
+&emmc {
+	status = "okay";
+};
+
+&sdio {
+	bus-width = <4>;
+	non-removable;
+	cap-sd-highspeed;
+	cap-mmc-highspeed;
+	sd-uhs-sdr12;
+	sd-uhs-sdr25;
+	sd-uhs-sdr50;
+	sd-uhs-sdr104;
+	keep-power-in-suspend;
+	enable-sdio-wakeup;
+	no-sd;
+	no-mmc;
+	status = "okay";
+};
+
+&sata_phy {
+	status = "okay";
+};
+
+&sata_phy0 {
+	status = "okay";
+};
+
+&sata_phy1 {
+	status = "okay";
+};
+
+&ahci_sata {
+	status = "okay";
+};
+
+&sata_port0 {
+	status = "okay";
+};
+
+&sata_port1 {
+	status = "okay";
+};
+
+&gpu {
+	status = "okay";
+	operating-points-v2 = <&gpu_opps>;
+
+	gpu_opps: opp-table-gpu {
+		compatible = "operating-points-v2",
+			     "operating-points-v2-mali";
+
+		opp-400 {
+			opp-hz = /bits/ 64 <400000000>;
+			opp-hz-real = /bits/ 64 <400000000>;
+			opp-microvolt = <900000>;
+			opp-suspend;
+		};
+		opp-500 {
+			opp-hz = /bits/ 64 <500000000>;
+			opp-hz-real = /bits/ 64 <500000000>;
+			opp-microvolt = <900000>;
+		};
+		opp-550 {
+			opp-hz = /bits/ 64 <550000000>;
+			opp-hz-real = /bits/ 64 <550000000>;
+			opp-microvolt = <900000>;
+		};
+	};
+};
+
+&sound {
+	status = "okay";
+};
+
+&rng {
+	status = "okay";
+};
+
+&hse {
+	status = "okay";
+};
+
+&cp {
+	status = "okay";
+};
+
+&ve1 {
+	status = "okay";
+};
+
+&jpeg {
+	status = "okay";
+};
+
+&apw8886 {
+	regulators {
+		vd33_supp: dc1 {
+			regulator-name = "vd33";
+			regulator-min-microvolt = <2200000>;
+			regulator-max-microvolt = <3777500>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+				regulator-suspend-microvolt = <3300000>;
+			};
+		};
+
+		core_supp: dc2 {
+			regulator-name = "core";
+			regulator-min-microvolt = <550000>;
+			regulator-max-microvolt = <1337500>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+				regulator-suspend-microvolt = <900000>;
+			};
+		};
+
+		cpu_supp: dc3 {
+			regulator-name = "cpudvs";
+			regulator-min-microvolt = <550000>;
+			regulator-max-microvolt = <1337500>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
+			regulator-ramp-delay = <625>;
+			regulator-state-mem {
+				regulator-off-in-suspend;
+			};
+		};
+
+		vd18_supp: dc4 {
+			regulator-name = "vd18";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <2060000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+			};
+		};
+
+		ddr_supp: dc5 {
+			regulator-name = "ddr";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <APW888X_DC_MODE_AUTO>;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+			};
+			regulator-state-shutdown {
+				regulator-off-in-suspend;
+			};
+		};
+
+		vd25_supp: ldo1 {
+			regulator-name = "vd25";
+			regulator-min-microvolt = <1780000>;
+			regulator-max-microvolt = <3020000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-initial-mode = <APW888X_LDO_MODE_NORMAL>;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+			};
+		};
+
+		vfb5 {
+			regulator-name = "vfb5";
+			regulator-min-microvolt = <512500>;
+			regulator-max-microvolt = <700000>;
+
+			regulator-boot-on;
+			regulator-always-on;
+			regulator-state-mem {
+				regulator-on-in-suspend;
+			};
+		};
+	};
+};
+
+&cpu0 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu1 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu2 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu3 {
+	cpu-supply = <&cpu_supp>;
+	operating-points-v2 = <&cpu_opps>;
+	#cooling-cells = <2>;
+};
+
+&cpu_dvfs {
+	fss,opp-updated = <0>;
+	fss,volt-correct = <50000>;
+	fss,volt-step = <25000>;
+	fss,volt-min = <875000>;
+	fss,volt-max = <1050000>;
+
+	cpu_opps: opp-table-cpu {
+		compatible = "operating-points-v2";
+		opp-shared;
+		opp700: opp-700000000 {
+			opp-hz = /bits/ 64 <700000000>;
+			opp-microvolt = <887500>;
+			opp-microvolt-fss = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp800: opp-800000000 {
+			opp-hz = /bits/ 64 <800000000>;
+			opp-microvolt = <912500>;
+			opp-microvolt-fss = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp900: opp-900000000 {
+			opp-hz = /bits/ 64 <900000000>;
+			opp-microvolt = <937500>;
+			opp-microvolt-fss = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp1000: opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <962500>;
+			opp-microvolt-fss = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+		opp1100: opp-1100000000 {
+			opp-hz = /bits/ 64 <1100000000>;
+			opp-microvolt = <987500>;
+			opp-microvolt-fss = <0>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
+			status = "okay";
+		};
+		opp1200: opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <1012500>;
+			opp-microvolt-fss = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+	};
+};
+
+&efuse {
+	otp_usb_port0_dc_dis: usb-port0-dc-dis@4fe,0 {
+		reg = <0x4fe 0x1>;
+		bits = <0 4>;
+	};
+	otp_usb_port1_dc_dis: usb-port1-dc-dis@4fe,4 {
+		reg = <0x4fe 0x1>;
+		bits = <4 4>;
+	};
+	otp_usb_port2_dc_dis: usb-port2-dc-dis@4ff,0 {
+		reg = <0x4ff 0x1>;
+		bits = <0 4>;
+	};
+};
+
+&usb_manager {
+	status = "okay";
+
+	gpio0: gpio0 {
+		realtek,power-gpio = <&gpio 48 GPIO_ACTIVE_HIGH>;
+		power_low_active;
+	};
+
+	gpio1: gpio1 {
+		realtek,power-gpio = <&gpio 49 GPIO_ACTIVE_HIGH>;
+		power_low_active;
+	};
+
+	port0 {
+		usb = <&dwc3_u2drd>;
+		usb_gpio = <&gpio0>;
+	};
+
+	port1 {
+		usb = <&dwc3_u2host>;
+		usb_gpio = <&gpio1>;
+	};
+
+	port2 {
+		usb = <&dwc3_u3drd>;
+		usb_gpio = <&gpio1>;
+	};
+
+	rtk_usb {
+		type_c {
+			realtek,connector_switch-gpio = <&gpio 30 GPIO_ACTIVE_HIGH>;
+		};
+	};
+};
+
+&dwc3_u2drd_usb2phy {
+	nvmem-cells = <&otp_usb_port0_dc_cal>, <&otp_usb_port0_dc_dis>;
+	nvmem-cell-names = "usb-dc-cal", "usb-dc-dis";
+	/delete-node/phy0;
+	phy0 {
+		phy_data_page0_size = <16>;
+		phy_data_page0_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7 0xF0 0xF1
+			 0xF2 0xF3 0xF4 0xF5 0xF6 0xF7>;
+		phy_data_page0_A00 = /bits/ 8
+			<0x14 0x30 0x79 0x8D 0x67 0x55 0x01 0x81 0xEC 0x8C
+			 0x00 0x11 0x9B 0x15 0x00 0x0A>;
+		phy_data_page1_size = <8>;
+		phy_data_page1_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7>;
+		phy_data_page1_A00 = /bits/ 8
+			<0x25 0xEF 0x60 0x23 0x00 0x0F 0x58 0xE3>;
+		phy_data_page2_size = <1>;
+		phy_data_page2_addr = /bits/ 8
+			<0xE0>;
+		phy_data_page2_A00 = /bits/ 8
+			<0x00>;
+		do_toggle;
+		do_toggle_driving;
+		check_efuse;
+		usb_dc_cal_mask = <0xf>;
+		usb_dc_dis_at_page0;
+		//use_default_parameter;
+		is_double_sensitivity_mode;
+		ldo_force_enable;
+	};
+};
+
+&dwc3_u2drd {
+	status = "okay";
+
+	dwc3_u2drd@98020000 {
+		dr_mode = "peripheral"; /*host, peripheral*/
+		status = "okay";
+	};
+};
+
+&dwc3_u2host_usb2phy {
+	nvmem-cells = <&otp_usb_port1_dc_cal>, <&otp_usb_port1_dc_dis>;
+	nvmem-cell-names = "usb-dc-cal", "usb-dc-dis";
+	/delete-node/phy0;
+	phy0 {
+		phy_data_page0_size = <16>;
+		phy_data_page0_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7 0xF0 0xF1
+			 0xF2 0xF3 0xF4 0xF5 0xF6 0xF7>;
+		phy_data_page0_A00 = /bits/ 8
+			<0x14 0x30 0x79 0x8D 0x67 0x55 0x01 0x81 0xEC 0x8C
+			 0x00 0x11 0x9B 0x15 0x00 0x0A>;
+		phy_data_page1_size = <8>;
+		phy_data_page1_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7>;
+		phy_data_page1_A00 = /bits/ 8
+			<0x25 0xEF 0x60 0x23 0x00 0x0F 0x58 0xE3>;
+		phy_data_page2_size = <1>;
+		phy_data_page2_addr = /bits/ 8
+			<0xE0>;
+		phy_data_page2_A00 = /bits/ 8
+			<0x00>;
+		do_toggle;
+		do_toggle_driving;
+		check_efuse;
+		usb_dc_cal_mask = <0xf>;
+		usb_dc_dis_at_page0;
+		//use_default_parameter;
+		is_double_sensitivity_mode;
+		ldo_force_enable;
+	};
+};
+
+&dwc3_u2host {
+	status = "okay";
+};
+
+&dwc3_u3drd_usb2phy {
+	nvmem-cells = <&otp_usb_port2_dc_cal>, <&otp_usb_port2_dc_dis>;
+	nvmem-cell-names = "usb-dc-cal", "usb-dc-dis";
+	/delete-node/phy0;
+	phy0 {
+		phy_data_page0_size = <16>;
+		phy_data_page0_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7 0xF0 0xF1
+			 0xF2 0xF3 0xF4 0xF5 0xF6 0xF7>;
+		phy_data_page0_A00 = /bits/ 8
+			<0x14 0x30 0x79 0x8D 0x67 0x55 0x01 0x81 0xEC 0x8C
+			 0x00 0x11 0x9B 0x15 0x00 0x0A>;
+		phy_data_page1_size = <8>;
+		phy_data_page1_addr = /bits/ 8
+			<0xE0 0xE1 0xE2 0xE3 0xE4 0xE5 0xE6 0xE7>;
+		phy_data_page1_A00 = /bits/ 8
+			<0x25 0xEF 0x60 0x23 0x00 0x0F 0x58 0xE3>;
+		phy_data_page2_size = <1>;
+		phy_data_page2_addr = /bits/ 8
+			<0xE0>;
+		phy_data_page2_A00 = /bits/ 8
+			<0x00>;
+		do_toggle;
+		do_toggle_driving;
+		check_efuse;
+		usb_dc_cal_mask = <0xf>;
+		usb_dc_dis_at_page0;
+		//use_default_parameter;
+		is_double_sensitivity_mode;
+		ldo_force_enable;
+	};
+};
+
+&dwc3_u3drd_usb3phy {
+	status = "disabled";
+};
+
+&dwc3_u3drd {
+	status = "okay";
+
+	dwc3_u3drd@981f0000 {
+		dr_mode = "host"; /*host, peripheral*/
+		usb-phy = <&dwc3_u3drd_usb2phy>;
+		status = "okay";
+	};
+};
+
+&rtk_type_c {
+	status = "okay";
+
+	dwc3_rtk = <&dwc3_u2drd>;
+
+	boot_check_time = <30000>; /*ms (At boot Device switch Host time)*/
+
+	default_revision = <0xA00>;
+	A00 {
+		cc_dfp_mode = "dfp_3_0"; /*dfp_3_0, dfp_1_5, dfp_usb*/
+		cc1_rp_4p7k_code = <0xE>;
+		cc1_rp_36k_code = <0xC>;
+		cc1_rp_12k_code = <0xC>;
+		cc1_rd_code = <0xA>;
+		cc1_ra_code = <0x3>;
+		cc1_vref_ufp = /bits/ 8
+			<0x7 0x7 0x4>; /*<1p23v,0p66v,0p2v>*/
+		cc1_vref_dfp_usb = /bits/ 8
+			<0x7 0x4 0x0>; /*<0_1p6v,0p2v,unused>*/
+		cc1_vref_dfp_1_5 = /bits/ 8
+			<0x7 0x4 0x4>; /*<1_1p6v,0p4v,0p2v>*/
+		cc1_vref_dfp_3_0 = /bits/ 8
+			<0xa 0x7 0x4>; /*<2p6v,0p8v,0p2v>*/
+		cc2_rp_4p7k_code = <0xE>;
+		cc2_rp_36k_code = <0xC>;
+		cc2_rp_12k_code = <0xC>;
+		cc2_rd_code = <0xA>;
+		cc2_ra_code = <0x3>;
+		cc2_vref_ufp = /bits/ 8
+			<0x7 0x7 0x4>; /*<1p23v,0p66v,0p2v>*/
+		cc2_vref_dfp_usb = /bits/ 8
+			<0x7 0x4 0x0>; /*<0_1p6v,0p2v,unused>*/
+		cc2_vref_dfp_1_5 = /bits/ 8
+			<0x7 0x4 0x4>; /*<1_1p6v,0p4v,0p2v>*/
+		cc2_vref_dfp_3_0 = /bits/ 8
+			<0xa 0x7 0x4>; /*<2p6v,0p8v,0p2v>*/
+	};
+};
+
+&cpu_thermal {
+	trips {
+		cpu_alert0: cpu-alert0 {
+			temperature = <90000>;
+			hysteresis = <0>;
+			type = "passive";
+		};
+		cpu_alert1: cpu-alert1 {
+			temperature = <105000>;
+			hysteresis = <0>;
+			type = "passive";
+		};
+	};
+	cooling-maps {
+		cpu-map0 {
+			trip = <&cpu_alert0>;
+			cooling-device = <&cpu0 THERMAL_NO_LIMIT 2>;
+			contribution = <70>;
+		};
+		cpu-map1 {
+			trip = <&cpu_alert1>;
+			cooling-device = <&cpu0 3 THERMAL_NO_LIMIT>;
+			contribution = <70>;
+		};
+	};
+};
+
+&rtk_fw_pm {
+	status = "okay";
+};
+
+&vcpu {
+	status = "okay";
+};
+
+&rtk_pm {
+	wakeup-flags = <NORMAL_MODE>;
+	wakeup-gpio-list = <11 GPIO_WAKEUP_ENABLE GPIO_WAKEUP_ACTIVE_LOW>,
+			   <26 GPIO_WAKEUP_ENABLE GPIO_WAKEUP_ACTIVE_LOW>;
+	wakeup-timer = <0>;
+	status = "okay";
+};
+
+&audio_out {
+	audio-gpios = <&gpio 47 GPIO_ACTIVE_HIGH>;
+	pinctrl-names = "default";
+	pinctrl-0 = <&spdif_pins>;
+	status = "okay";
+};
+
+&tp {
+	status = "okay";
+};
+
+&rtk_ion {
+	rtk,ion-heap@7 {
+		rtk,flag-replace-table = <(RTK_FLAG_PROTECTED_V2_FW_STACK) (RTK_FLAG_PROTECTED_V2_AUDIO_POOL | RTK_FLAG_PROTECTED_EXT_BITS(1))
+						(RTK_FLAG_PROTECTED_V2_VIDEO_POOL) (RTK_FLAG_PROTECTED_V2_VIDEO_POOL | RTK_FLAG_PROTECTED_EXT_BITS(1))>;
+
+		rtk,pre-alloc = <(RTK_FLAG_PROTECTED_V2_AUDIO_POOL | RTK_FLAG_PROTECTED_EXT_BITS(1) | RTK_FLAG_ACPUACC) (0x00a00000)>;
+	};
+
+};
+
+/delete-node/ &pcie_trans;
+/delete-node/ &pcie;
+/delete-node/ &pcie1;
+/delete-node/ &pcie2;
+/delete-node/ &pcie0_phy;
+/delete-node/ &pcie1_phy;
+/delete-node/ &pcie2_phy;

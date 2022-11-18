@@ -1,0 +1,36 @@
+From aac68ebf2c0089600febcdb7089973cb6559be89 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:29:03 +0800
+Subject: [PATCH 16/54] 702: phy: realtek: Add phy driver
+
+---
+ drivers/phy/Kconfig  | 1 +
+ drivers/phy/Makefile | 1 +
+ 2 files changed, 2 insertions(+)
+
+diff --git a/drivers/phy/Kconfig b/drivers/phy/Kconfig
+index 9ed5f167a..91e96fadc 100644
+--- a/drivers/phy/Kconfig
++++ b/drivers/phy/Kconfig
+@@ -83,5 +83,6 @@ source "drivers/phy/tegra/Kconfig"
+ source "drivers/phy/ti/Kconfig"
+ source "drivers/phy/intel/Kconfig"
+ source "drivers/phy/xilinx/Kconfig"
++source "drivers/phy/realtek/Kconfig"
+ 
+ endmenu
+diff --git a/drivers/phy/Makefile b/drivers/phy/Makefile
+index 6eb291677..14302a112 100644
+--- a/drivers/phy/Makefile
++++ b/drivers/phy/Makefile
+@@ -9,6 +9,7 @@ obj-$(CONFIG_PHY_LPC18XX_USB_OTG)	+= phy-lpc18xx-usb-otg.o
+ obj-$(CONFIG_PHY_XGENE)			+= phy-xgene.o
+ obj-$(CONFIG_PHY_PISTACHIO_USB)		+= phy-pistachio-usb.o
+ obj-$(CONFIG_USB_LGM_PHY)		+= phy-lgm-usb.o
++obj-$(CONFIG_ARCH_REALTEK)              += realtek/
+ obj-y					+= allwinner/	\
+ 					   amlogic/	\
+ 					   broadcom/	\
+-- 
+2.17.1
+

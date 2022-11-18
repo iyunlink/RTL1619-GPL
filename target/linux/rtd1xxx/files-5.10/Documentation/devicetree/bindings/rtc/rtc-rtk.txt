@@ -1,0 +1,24 @@
+Realtek real time clock driver dt-bindings
+==========================================
+
+Required properties:
+- compatible: must contains one of the following
+		"realtek,rtd1195-rtc",
+		"realtek,rtd1295-rtc",
+		"realtek,rtd1619-rtc",
+		"realtek,rtd1319-rtc".
+
+- reg: contain the base of rtc register
+
+- realtek,iso: a phandle to iso syscon
+
+Optional properties:
+
+- clocks: only required by rtd1195-rtc and rtd1295-rtc
+
+- resets: only required by rtd1195-rtc
+
+- rtc-base-year: should contain a integer for base year
+
+- rtc-bias: should contain a integer for bias
+

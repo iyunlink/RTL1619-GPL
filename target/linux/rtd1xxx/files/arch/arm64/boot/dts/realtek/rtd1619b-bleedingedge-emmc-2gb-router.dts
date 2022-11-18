@@ -1,0 +1,197 @@
+// SPDX-License-Identifier: (GPL-2.0-or-later OR BSD-2-Clause)
+/*
+ * Copyright (c) 2020 Realtek Semiconductor Corp.
+ */
+
+/dts-v1/;
+
+#include "rtd1619b-bleedingedge.dtsi"
+
+/ {
+	compatible = "realtek,bleeding-edge-emmc-router", "realtek,rtd1619b";
+	model = "Realtek Bleeding Edge EVB eMMC (2GB) Router";
+
+	memory@40000 {
+		device_type = "memory";
+		reg = <0x00040000 0x7ffc0000>; /* 2 GB */
+	};
+
+	chosen {
+		bootargs = "earlycon=uart8250,mmio32,0x98007800 console=ttyS0,460800 uio_pdrv_genirq.of_id=generic-uio init=/sbin/init root=/dev/mmcblk0p1 rootfstype=squashfs rootwait loglevel=8 NO_RESERVE";
+	};
+
+};
+
+&cpu_dvfs {
+	fss,opp-updated = <0>;
+	fss,volt-correct = <25000>;
+	fss,volt-step = <25000>;
+	fss,volt-min = <775000>;
+	fss,volt-max = <1150000>;
+
+	bsv,opp-updated = <0>;
+	bsv,volt-correct = <150000 175000>;
+	bsv,volt-step = <25000>;
+	bsv,volt-min = <800000>;
+	bsv,volt-max = <1150000>;
+
+	cpu_opps: opp-table-cpu {
+		compatible = "operating-points-v2";
+		opp-shared;
+
+		opp1000: opp-1000000000 {
+			opp-hz = /bits/ 64 <1000000000>;
+			opp-microvolt = <800000>;
+			opp-microvolt-bsv = <0>;
+			opp-microvolt-fss = <0>;
+			clock-latency-ns = <150000>;
+			status = "disabled";
+		};
+
+		opp1100: opp-1100000000 {
+			opp-hz = /bits/ 64 <1100000000>;
+			opp-microvolt = <825000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1200: opp-1200000000 {
+			opp-hz = /bits/ 64 <1200000000>;
+			opp-microvolt = <850000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1300: opp-1300000000 {
+			opp-hz = /bits/ 64 <1300000000>;
+			opp-microvolt = <875000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1400: opp-1400000000 {
+			opp-hz = /bits/ 64 <1400000000>;
+			opp-microvolt = <900000>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1500: opp-1500000000 {
+			opp-hz = /bits/ 64 <1500000000>;
+			opp-microvolt = <937500>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1600: opp-1600000000 {
+			opp-hz = /bits/ 64 <1600000000>;
+			opp-microvolt = <987500>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp1700: opp-1700000000 {
+			opp-hz = /bits/ 64 <1700000000>;
+			opp-microvolt = <1037500>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			opp-suspend;
+			status = "okay";
+		};
+
+		opp-1800000000 {
+			opp-hz = /bits/ 64 <1800000000>;
+			opp-microvolt = <0>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp-1900001000 {
+			opp-hz = /bits/ 64 <1900001000>;
+			opp-microvolt = <0>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+		};
+
+		opp-1900009000 {
+			opp-hz = /bits/ 64 <1900009000>;
+			opp-microvolt = <0>;
+			opp-microvolt-fss = <0>;
+			opp-microvolt-bsv = <0>;
+			clock-latency-ns = <150000>;
+			status = "okay";
+			turbo-mode;
+		};
+	};
+};
+
+&cpu_thermal {
+	trips {
+		cpu_alert0: cpu-alert0 {
+			temperature = <65000>;
+			hysteresis = <0>;
+			type = "passive";
+		};
+
+		cpu_alert1: cpu-alert1 {
+			temperature = <90000>;
+			hysteresis = <0>;
+			type = "passive";
+		};
+
+		cpu_alert2: cpu-alert2 {
+			temperature = <105000>;
+			hysteresis = <0>;
+			type = "passive";
+		};
+	};
+
+	cooling-maps {
+		cpu-map0 {
+			trip = <&cpu_alert0>;
+			cooling-device = <&cpu0 1 1>;
+			contribution = <70>;
+		};
+
+		cpu-map1 {
+			trip = <&cpu_alert1>;
+			cooling-device = <&cpu0 2 6>;
+			contribution = <70>;
+		};
+
+		cpu-map1 {
+			trip = <&cpu_alert2>;
+			cooling-device = <&cpu0 7 THERMAL_NO_LIMIT>;
+			contribution = <70>;
+		};
+	};
+};
+
+
+/ {
+	cpu-booster {
+		compatible = "realtek,cpu-hlb";
+		status = "okay";
+
+		realtek,hlb-polling-ms = <500>;
+		realtek,hlb-load-threshold = <90>;
+		realtek,hlb-freq-threshold-khz = <1900001>;
+	};
+};

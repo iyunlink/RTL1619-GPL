@@ -1,0 +1,8 @@
+--- a/drivers/net/wireless/realtek/rtkwifiu/rtl8822cs/Kconfig
++++ b/drivers/net/wireless/realtek/rtkwifiu/rtl8822cs/Kconfig
+@@ -1,4 +1,4 @@
+-config RTL8822BS
++config RTL8822CS
+ 	tristate "Realtek 8822C SDIO WiFi"
+ 	---help---
+ 	  Help message of RTL8822CS

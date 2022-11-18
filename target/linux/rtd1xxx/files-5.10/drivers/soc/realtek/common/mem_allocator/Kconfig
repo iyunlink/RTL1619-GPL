@@ -1,0 +1,1 @@
+source "drivers/soc/realtek/common/mem_allocator/rtk/Kconfig"

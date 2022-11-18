@@ -1,0 +1,55 @@
+From 880ade6ea1c676d43fac315ee9daa214e2546562 Mon Sep 17 00:00:00 2001
+From: Ken Tseng <ken.tseng@realtek.com>
+Date: Tue, 8 Mar 2022 14:22:22 +0800
+Subject: [PATCH 10/54] 400: mtd: rawnand: Add MTD_NAND_RTK
+
+---
+ drivers/mtd/nand/raw/Kconfig  | 18 ++++++++++++++++++
+ drivers/mtd/nand/raw/Makefile |  2 ++
+ 2 files changed, 20 insertions(+)
+
+diff --git a/drivers/mtd/nand/raw/Kconfig b/drivers/mtd/nand/raw/Kconfig
+index 6c46f25b5..3f070cda1 100644
+--- a/drivers/mtd/nand/raw/Kconfig
++++ b/drivers/mtd/nand/raw/Kconfig
+@@ -395,6 +395,24 @@ config MTD_NAND_MTK
+ 	  Enables support for NAND controller on MTK SoCs.
+ 	  This controller is found on mt27xx, mt81xx, mt65xx SoCs.
+ 
++config MTD_NAND_RTK
++	tristate "RTK NAND controller"
++	help
++	  Enables support for NAND controller on Realtek SoCs.
++	  This controller is found on rtd12xx, rtd13xx SoCs.
++
++config MTD_NAND_RTK_BBM
++	bool "RTK NAND Flash Bad Block Management"
++	depends on MTD_NAND_RTK
++	help
++          Enables RTK Bad Block Management.
++
++config MTD_NAND_RTK_BBTCRC
++	bool "RTK BBT CRC Check"
++	depends on MTD_NAND_RTK_BBM
++	help
++          Enables RTK CRC check for BBT.
++
+ config MTD_NAND_MXIC
+ 	tristate "Macronix raw NAND controller"
+ 	depends on HAS_IOMEM || COMPILE_TEST
+diff --git a/drivers/mtd/nand/raw/Makefile b/drivers/mtd/nand/raw/Makefile
+index 2930f5b90..d8178a5f0 100644
+--- a/drivers/mtd/nand/raw/Makefile
++++ b/drivers/mtd/nand/raw/Makefile
+@@ -58,6 +58,8 @@ obj-$(CONFIG_MTD_NAND_STM32_FMC2)	+= stm32_fmc2_nand.o
+ obj-$(CONFIG_MTD_NAND_MESON)		+= meson_nand.o
+ obj-$(CONFIG_MTD_NAND_CADENCE)		+= cadence-nand-controller.o
+ obj-$(CONFIG_MTD_NAND_ARASAN)		+= arasan-nand-controller.o
++obj-$(CONFIG_MTD_NAND_RTK)		+= rtk_nand.o
++obj-$(CONFIG_MTD_NAND_RTK_BBM)		+= rtk_bbm.o
+ 
+ nand-objs := nand_base.o nand_legacy.o nand_bbt.o nand_timings.o nand_ids.o
+ nand-objs += nand_onfi.o
+-- 
+2.17.1
+

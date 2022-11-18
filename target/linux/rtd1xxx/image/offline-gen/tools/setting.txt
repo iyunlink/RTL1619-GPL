@@ -1,0 +1,14 @@
+#
+# Automatically generated make config: don't edit
+# version: VERSION
+# Mon May 28 14:19:00 2018
+#
+# CONFIG_FLASH_TYPE_EMMC is not set
+# CONFIG_FLASH_TYPE_NAND is not set
+# CONFIG_FLASH_EMMC_SIZE_16G is not set
+# CONFIG_FLASH_EMMC_SIZE_32G is not set
+# CONFIG_FLASH_EMMC_SIZE_4G is not set
+# CONFIG_FLASH_EMMC_SIZE_8G is not set
+CONFIG_FLASH_TYPE="nor"
+CONFIG_FLASH_SIZE_KB=16384
+CONFIG_FLASH_ERASE_SIZE_KB=64

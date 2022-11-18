@@ -1,0 +1,24 @@
+From 1e365fd1cc083fe16a4a5974f7412bf3ab9a8bbf Mon Sep 17 00:00:00 2001
+Date: Wed, 27 Apr 2022 13:40:13 +0800
+Subject: [PATCH] coreutils: Enable Linux kernel crypto API for hash
+
+---
+ utils/coreutils/Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/utils/coreutils/Makefile b/utils/coreutils/Makefile
+index 157a2496f..acef8438a 100644
+--- a/utils/coreutils/Makefile
++++ b/utils/coreutils/Makefile
+@@ -125,7 +125,7 @@ CONFIGURE_ARGS += \
+ 	--disable-rpath \
+ 	--disable-libsmack \
+ 	--enable-libcap \
+-	--without-linux-crypto \
++	--with-linux-crypto \
+ 	--without-openssl \
+ 	--$(if $(CONFIG_USE_MUSL),with,without)-included-regex \
+ 	--without-selinux \
+-- 
+2.17.1
+

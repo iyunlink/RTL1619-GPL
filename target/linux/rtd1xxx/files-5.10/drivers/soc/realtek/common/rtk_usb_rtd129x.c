@@ -1,0 +1,630 @@
+// SPDX-License-Identifier: GPL-2.0-only
+/*
+ * rtk_usb.c
+ *
+ * Copyright (c) 2017 Realtek Semiconductor Corp.
+ * Copyright (c) 2020 Realtek Semiconductor Corp.
+ *
+ */
+
+#include <linux/slab.h>
+#include <linux/io.h>
+#include <linux/of.h>
+#include <linux/delay.h>
+#include <linux/sys_soc.h>
+//#include <soc/realtek/power-control.h>
+#include<linux/module.h>
+
+#include "rtk_usb.h"
+
+static struct soc_device_attribute rtk_soc_rtd1296[] = {
+	{
+		.family = "Realtek Kylin",
+		.soc_id = "RTD1296",
+	},
+	{
+	/* empty */
+	}
+};
+
+static struct soc_device_attribute rtk_soc_a00[] = {
+	{
+		.revision = "A00",
+	},
+	{
+	/* empty */
+	}
+};
+
+static struct soc_device_attribute rtk_soc_BXX[] = {
+	{
+		.revision = "B0*",
+	},
+	{
+	/* empty */
+	}
+};
+
+struct rtk_usb {
+	struct power_ctrl_reg {
+		u32 usb_ctrl;
+		/* Port 0~2 */
+		u32 usb0_sram_pwr;
+		u32 usb0_sram_pwr_ctrl;
+		/* Port 3 */
+		u32 usb1_sram_pwr;
+		u32 usb1_sram_pwr_ctrl;
+		/* l4_icg */
+		u32 p0_l4_icg;
+		u32 p1_l4_icg;
+		u32 p2_l4_icg;
+		u32 p3_l4_icg;
+
+		/* for power cut */
+		u32 usb_phy_ctrl;
+
+		u32 p0_utmi_reset;
+		u32 p1_utmi_reset;
+		u32 p2_utmi_reset;
+		u32 p3_utmi_reset;
+
+		u32 p0_pipe_reset;
+		u32 p1_pipe_reset;
+		u32 p2_pipe_reset;
+		u32 p3_pipe_reset;
+
+		/* for suspend */
+		u32 p0_gusb2phycfg;
+		u32 p0_gusb3pipectl;
+
+		u32 p1_gusb2phycfg;
+		u32 p1_gusb3pipectl;
+
+		u32 p2_gusb2phycfg;
+		u32 p2_gusb3pipectl;
+
+		u32 p3_gusb2phycfg;
+		u32 p3_gusb3pipectl;
+
+		u32 usb_charger;
+	} power_ctrl_reg;
+
+	bool usb_power_cut;
+
+	struct type_c {
+		u32 usb_typec_ctrl_cc1_0;
+	} type_c;
+};
+
+static struct rtk_usb *rtk_usb;
+
+#define TYPE_C_EN_SWITCH BIT(29)
+#define TYPE_C_TxRX_sel (BIT(28) | BIT(27))
+#define TYPE_C_SWITCH_MASK (TYPE_C_EN_SWITCH | TYPE_C_TxRX_sel)
+#define TYPE_C_enable_cc1 TYPE_C_EN_SWITCH
+#define TYPE_C_enable_cc2 (TYPE_C_EN_SWITCH | TYPE_C_TxRX_sel)
+#define TYPE_C_disable_cc ~TYPE_C_SWITCH_MASK
+#define disable_cc 0x0
+#define enable_cc1 0x1
+#define enable_cc2 0x2
+
+/* set usb charger power */
+static void usb_set_charger_power(struct rtk_usb *rtk_usb, unsigned int val)
+{
+	void __iomem *reg_charger;
+
+	if (!rtk_usb || !rtk_usb->power_ctrl_reg.usb_charger)
+		return;
+
+	reg_charger  = ioremap(rtk_usb->power_ctrl_reg.usb_charger, 0x4);
+
+	pr_debug("set usb_charger to 0x%08x\n", val);
+
+	writel(val, reg_charger);
+
+	iounmap(reg_charger);
+}
+
+static int usb_set_hw_l4icg_on_off(struct rtk_usb *rtk_usb,
+	    enum usb_port_num port_num, bool on)
+{
+	void __iomem *reg;
+
+	if (!rtk_usb)
+		return 0;
+
+	switch (port_num) {
+	case USB_PORT_0:
+		if (rtk_usb->power_ctrl_reg.p0_l4_icg) {
+			reg = ioremap(rtk_usb->power_ctrl_reg.p0_l4_icg, 0x4);
+			writel((on&BIT(0)) | readl(reg), reg);
+			iounmap(reg);
+		}
+		break;
+	case USB_PORT_1:
+		if (rtk_usb->power_ctrl_reg.p1_l4_icg) {
+			reg = ioremap(rtk_usb->power_ctrl_reg.p1_l4_icg, 0x4);
+			writel((on&BIT(0)) | readl(reg), reg);
+			iounmap(reg);
+		}
+		break;
+	case USB_PORT_2:
+		if (rtk_usb->power_ctrl_reg.p2_l4_icg) {
+			reg = ioremap(rtk_usb->power_ctrl_reg.p3_l4_icg, 0x4);
+			writel((on&BIT(0)) | readl(reg), reg);
+			iounmap(reg);
+		}
+		break;
+	case USB_PORT_3:
+		if (rtk_usb->power_ctrl_reg.p3_l4_icg) {
+			reg = ioremap(rtk_usb->power_ctrl_reg.p3_l4_icg, 0x4);
+			writel((on&BIT(0)) | readl(reg), reg);
+			iounmap(reg);
+		}
+		break;
+	default:
+		pr_err("%s Error Port num %d\n", __func__, port_num);
+		break;
+	}
+
+	return 0;
+}
+
+static int __isolate_phy_from_a_to_d(struct rtk_usb *rtk_usb)
+{
+	void __iomem *reg;
+
+	/* isolate UPHY A->D */
+	if (!rtk_usb)
+		return 0;
+
+	pr_debug("%s START\n", __func__);
+
+	pr_debug("set USB Analog phy power off\n");
+
+	if (rtk_usb->power_ctrl_reg.usb_phy_ctrl) {
+		reg = ioremap(rtk_usb->power_ctrl_reg.usb_phy_ctrl, 0x4);
+		writel(BIT(0) | BIT(1) | readl(reg), reg);
+		iounmap(reg);
+	}
+	if (rtk_usb->power_ctrl_reg.p0_utmi_reset) {
+		reg = ioremap(rtk_usb->power_ctrl_reg.p0_utmi_reset, 0x4);
+		writel(BIT(0) | readl(reg), reg);
+		iounmap(reg);
+	}
+	if (rtk_usb->power_ctrl_reg.p1_utmi_reset) {
+		reg = ioremap(rtk_usb->power_ctrl_reg.p1_utmi_reset, 0x4);
+		writel(BIT(0) | readl(reg), reg);
+		iounmap(reg);
+	}
+	if (rtk_usb->power_ctrl_reg.p2_utmi_reset) {
+		reg = ioremap(rtk_usb->power_ctrl_reg.p2_utmi_reset, 0x4);
+		writel(BIT(0) | readl(reg), reg);
+		iounmap(reg);
+	}
+	if (soc_device_match(rtk_soc_rtd1296) &&
+		    rtk_usb->power_ctrl_reg.p3_utmi_reset) {
+		reg = ioremap(rtk_usb->power_ctrl_reg.p3_utmi_reset, 0x4);
+		writel(BIT(0) | readl(reg), reg);
+		iounmap(reg);
+	}
+	if (rtk_usb->power_ctrl_reg.usb_ctrl) {
+		reg = ioremap(rtk_usb->power_ctrl_reg.usb_ctrl, 0x4);
+		writel(~(BIT(4) | BIT(5) | BIT(6)) & readl(reg), reg);
+
+		iounmap(reg);
+	}
+	pr_debug("%s END\n", __func__);
+
+	return 0;
+}
+
+static inline void __power_control_set_power(const char *name, bool power_on)
+{
+#if 0
+	struct power_control *pctrl = power_control_get(name);
+
+	if (!pctrl) {
+		pr_debug("%s: Failed to get power_control %s\n",
+			    __func__, name);
+		return;
+	}
+	if (power_on)
+		power_control_power_on(pctrl);
+	else
+		power_control_power_off(pctrl);
+#endif
+}
+
+static int usb_iso_power_ctrl(struct rtk_usb *rtk_usb,
+	    bool power_on)
+{
+	if (!rtk_usb)
+		return 0;
+
+	pr_debug("%s START\n", __func__);
+
+	if (rtk_usb->power_ctrl_reg.usb_ctrl &&
+		    rtk_usb->power_ctrl_reg.usb0_sram_pwr &&
+		    rtk_usb->power_ctrl_reg.usb0_sram_pwr_ctrl &&
+		    rtk_usb->power_ctrl_reg.usb1_sram_pwr &&
+		    rtk_usb->power_ctrl_reg.usb1_sram_pwr_ctrl) {
+		void __iomem *usb_ctrl =
+			    ioremap(rtk_usb->power_ctrl_reg.usb_ctrl, 0x4);
+		void __iomem *usb0_sram_pwr =
+			    ioremap(rtk_usb->power_ctrl_reg.usb0_sram_pwr, 0x4);
+		void __iomem *usb0_sram_pwr_ctrl =
+			    ioremap(rtk_usb->power_ctrl_reg.usb0_sram_pwr_ctrl,
+			    0x4);
+		void __iomem *usb1_sram_pwr =
+			    ioremap(rtk_usb->power_ctrl_reg.usb1_sram_pwr, 0x4);
+		void __iomem *usb1_sram_pwr_ctrl =
+			   ioremap(rtk_usb->power_ctrl_reg.usb1_sram_pwr_ctrl,
+			   0x4);
+
+		pr_info("%s power_%s ([0x%x=0x%08x)\n", __func__,
+			    power_on?"on":"off",
+			    rtk_usb->power_ctrl_reg.usb_ctrl, readl(usb_ctrl));
+
+		if (power_on) {
+			pr_debug("%s power_on\n", __func__);
+
+			pr_debug("set usb_power_domain/p0 on\n");
+#if 1
+			/* set power gating control */
+				writel((BIT(0) | BIT(4) | BIT(6)) |
+				     readl(usb_ctrl), usb_ctrl);
+			/* port0-port2 sram power */
+			//writel(0, usb0_sram_pwr);
+			writel(0x00000f00, usb0_sram_pwr_ctrl);
+			/* port3 sram power */
+			if (soc_device_match(rtk_soc_rtd1296)) {
+				pr_info("set usb_power_domain/p3 on\n");
+				writel((BIT(1) | BIT(5)) |
+				     readl(usb_ctrl), usb_ctrl);
+				//writel(0, usb1_sram_pwr);
+				if (soc_device_match(rtk_soc_a00))
+					writel(0x00000f05, usb1_sram_pwr_ctrl);
+				else
+					writel(0x00000f00, usb1_sram_pwr_ctrl);
+			}
+			/* disable isolation cell */
+			writel(~(BIT(8) | BIT(9)) & readl(usb_ctrl), usb_ctrl);
+#else
+			__power_control_set_power("pctrl_usb_p0_mac", 1);
+			__power_control_set_power("pctrl_usb_p0_phy", 1);
+			__power_control_set_power("pctrl_usb_p0_iso", 0);
+			if (soc_device_match(rtk_soc_rtd1296)) {
+				pr_info("set usb_power_domain/p3 on\n");
+				__power_control_set_power("pctrl_usb_p3_phy",
+					    1);
+				__power_control_set_power("pctrl_usb_p3_mac",
+					    1);
+				__power_control_set_power("pctrl_usb_p3_iso",
+					    0);
+			}
+#endif
+		} else {
+			pr_debug("%s power_off\n", __func__);
+			__isolate_phy_from_a_to_d(rtk_usb);
+			if (rtk_usb->usb_power_cut &&
+				    soc_device_match(rtk_soc_BXX)) {
+				writel((BIT(8) | BIT(9)) | readl(usb_ctrl),
+					usb_ctrl);
+				// port0-port2 sram
+				writel(0, usb0_sram_pwr);
+				writel(0x00000f01, usb0_sram_pwr_ctrl);
+				// port3 sram
+				writel(0, usb1_sram_pwr);
+				writel(0x00000f01, usb1_sram_pwr_ctrl);
+
+				writel(~(BIT(0) | BIT(1) | BIT(4) | BIT(5) |
+					BIT(6)) & readl(usb_ctrl), usb_ctrl);
+			}
+		}
+		pr_info("set power_domain %s ([0x%x]=0x%08x)\n",
+			    power_on?"on":"off",
+			    rtk_usb->power_ctrl_reg.usb_ctrl, readl(usb_ctrl));
+		iounmap(usb_ctrl);
+		iounmap(usb0_sram_pwr);
+		iounmap(usb0_sram_pwr_ctrl);
+		iounmap(usb1_sram_pwr);
+		iounmap(usb1_sram_pwr_ctrl);
+	}
+	pr_debug("%s END\n", __func__);
+
+	return 0;
+}
+
+static int usb_port_suspend_resume(struct rtk_usb *rtk_usb,
+	    enum usb_port_num port_num, bool is_suspend)
+{
+	void __iomem *reg_u3_port;
+	void __iomem *reg_u2_port;
+
+	if (!rtk_usb)
+		return 0;
+
+	pr_debug("%s START\n", __func__);
+	switch (port_num) {
+	case USB_PORT_0:
+		pr_debug("set port 0 phy suspend\n");
+		if (rtk_usb->power_ctrl_reg.p0_gusb3pipectl) {
+			reg_u3_port = ioremap(
+				rtk_usb->power_ctrl_reg.p0_gusb3pipectl, 0x4);
+			if (is_suspend)
+				writel(readl(reg_u3_port) | BIT(17),
+					    reg_u3_port);
+			else
+				writel(readl(reg_u3_port) & ~BIT(17),
+					    reg_u3_port);
+			iounmap(reg_u3_port);
+		}
+		if (rtk_usb->power_ctrl_reg.p0_gusb2phycfg) {
+			reg_u2_port = ioremap(
+				rtk_usb->power_ctrl_reg.p0_gusb2phycfg, 0x4);
+			if (is_suspend)
+				writel(readl(reg_u2_port) | BIT(6),
+					    reg_u2_port);
+			else
+				writel(readl(reg_u2_port) & ~BIT(6),
+					    reg_u2_port);
+			iounmap(reg_u2_port);
+		}
+	break;
+	case USB_PORT_1:
+		pr_debug("set port 1 phy suspend\n");
+		if (rtk_usb->power_ctrl_reg.p1_gusb3pipectl) {
+			reg_u3_port = ioremap(
+				rtk_usb->power_ctrl_reg.p1_gusb3pipectl, 0x4);
+			writel(readl(reg_u3_port) | BIT(17), reg_u3_port);
+			iounmap(reg_u3_port);
+		}
+		if (rtk_usb->power_ctrl_reg.p1_gusb2phycfg) {
+			reg_u2_port = ioremap(
+				rtk_usb->power_ctrl_reg.p1_gusb2phycfg, 0x4);
+			writel(readl(reg_u2_port) | BIT(6), reg_u2_port);
+			iounmap(reg_u2_port);
+		}
+	break;
+	case USB_PORT_2:
+		pr_debug("TODO set port 2 phy suspend\n");
+	break;
+	case USB_PORT_3:
+		pr_debug("set port 3 phy suspend\n");
+		if (rtk_usb->power_ctrl_reg.p3_gusb3pipectl) {
+			reg_u3_port = ioremap(
+				rtk_usb->power_ctrl_reg.p3_gusb3pipectl, 0x4);
+			writel(readl(reg_u3_port) | BIT(17), reg_u3_port);
+			iounmap(reg_u3_port);
+		}
+		if (rtk_usb->power_ctrl_reg.p3_gusb2phycfg) {
+			reg_u2_port = ioremap(
+				rtk_usb->power_ctrl_reg.p3_gusb2phycfg, 0x4);
+			writel(readl(reg_u2_port) | BIT(6), reg_u2_port);
+			iounmap(reg_u2_port);
+		}
+	break;
+	default:
+		pr_err("Error port num %d\n", port_num);
+	}
+	pr_debug("%s END\n", __func__);
+	return 0;
+}
+
+static int type_c_init(struct rtk_usb *rtk_usb)
+{
+	if (!rtk_usb) {
+		pr_info("%s: rtk_usb is NULL\n", __func__);
+		return 0;
+	}
+
+	return 0;
+}
+
+static int type_c_plug_config(struct rtk_usb *rtk_usb, int dr_mode, int cc)
+{
+	void __iomem *usb_typec_ctrl_cc1_0;
+	int val_cc;
+
+	if (!rtk_usb) {
+		pr_info("%s: rtk_usb is NULL\n", __func__);
+		return 0;
+	}
+
+	if (!rtk_usb->type_c.usb_typec_ctrl_cc1_0) {
+		pr_info("%s: rtk_usb no usb_typec_ctrl_cc1_0 reg\n", __func__);
+		return 0;
+	}
+
+	usb_typec_ctrl_cc1_0 = ioremap(rtk_usb->type_c.usb_typec_ctrl_cc1_0,
+		    0x4);
+	val_cc = readl(usb_typec_ctrl_cc1_0);
+	val_cc &= ~TYPE_C_SWITCH_MASK;
+
+	if (cc == disable_cc) {
+		val_cc &= TYPE_C_disable_cc;
+	} else if (cc == enable_cc1) {
+		val_cc |= TYPE_C_enable_cc1;
+	} else if (cc == enable_cc2) {
+		val_cc |= TYPE_C_enable_cc2;
+	} else {
+		pr_err("%s: Error cc setting cc=0x%x\n", __func__, cc);
+		return -1;
+	}
+	writel(val_cc, usb_typec_ctrl_cc1_0);
+
+	mdelay(1);
+
+	pr_info("%s: cc=0x%x val_cc=0x%x usb_typec_ctrl_cc1_0=0x%x\n",
+		    __func__, cc, val_cc, readl(usb_typec_ctrl_cc1_0));
+
+	iounmap(usb_typec_ctrl_cc1_0);
+
+	return 0;
+}
+
+static struct rtk_usb *usb_soc_init(struct device_node *node)
+{
+	struct device_node *sub_node;
+	int ret;
+
+	if (!rtk_usb)
+		rtk_usb = kzalloc(sizeof(struct rtk_usb), GFP_KERNEL);
+	if (!rtk_usb) {
+		//pr_err("%s: No Memeory to kzalloc rtk_usb!\n", __func__);
+		return NULL;
+	}
+
+	pr_info("%s START (%s)\n", __func__, __FILE__);
+
+	sub_node = of_get_child_by_name(node, "power_ctrl_reg");
+	if (sub_node) {
+		pr_debug("%s sub_node %s\n", __func__, sub_node->name);
+		of_property_read_u32(sub_node,
+			    "usb_ctrl", &rtk_usb->power_ctrl_reg.usb_ctrl);
+		/* Port 0~2 */
+		of_property_read_u32(sub_node,
+			    "usb0_sram_pwr",
+			    &rtk_usb->power_ctrl_reg.usb0_sram_pwr);
+		of_property_read_u32(sub_node,
+			    "usb0_sram_pwr_ctrl",
+			    &rtk_usb->power_ctrl_reg.usb0_sram_pwr_ctrl);
+		/* Port 3 */
+		of_property_read_u32(sub_node,
+			    "usb1_sram_pwr",
+			    &rtk_usb->power_ctrl_reg.usb1_sram_pwr);
+		of_property_read_u32(sub_node,
+			    "usb1_sram_pwr_ctrl",
+			    &rtk_usb->power_ctrl_reg.usb1_sram_pwr_ctrl);
+
+		of_property_read_u32(sub_node,
+			    "p0_l4_icg", &rtk_usb->power_ctrl_reg.p0_l4_icg);
+		of_property_read_u32(sub_node,
+			    "p1_l4_icg", &rtk_usb->power_ctrl_reg.p1_l4_icg);
+		of_property_read_u32(sub_node,
+			    "p2_l4_icg", &rtk_usb->power_ctrl_reg.p2_l4_icg);
+		of_property_read_u32(sub_node,
+			    "p3_l4_icg", &rtk_usb->power_ctrl_reg.p3_l4_icg);
+
+		/* for power cut */
+		of_property_read_u32(sub_node,
+			    "usb_phy_ctrl",
+			    &rtk_usb->power_ctrl_reg.usb_phy_ctrl);
+
+		of_property_read_u32(sub_node,
+			    "p0_utmi_reset",
+			    &rtk_usb->power_ctrl_reg.p0_utmi_reset);
+		of_property_read_u32(sub_node,
+			    "p1_utmi_reset",
+			    &rtk_usb->power_ctrl_reg.p1_utmi_reset);
+		of_property_read_u32(sub_node,
+			    "p2_utmi_reset",
+			    &rtk_usb->power_ctrl_reg.p2_utmi_reset);
+		of_property_read_u32(sub_node,
+			    "p3_utmi_reset",
+			    &rtk_usb->power_ctrl_reg.p3_utmi_reset);
+
+		of_property_read_u32(sub_node,
+			    "p0_pipe_reset",
+			    &rtk_usb->power_ctrl_reg.p0_pipe_reset);
+		of_property_read_u32(sub_node,
+			    "p1_pipe_reset",
+			    &rtk_usb->power_ctrl_reg.p1_pipe_reset);
+		of_property_read_u32(sub_node,
+			    "p2_pipe_reset",
+			    &rtk_usb->power_ctrl_reg.p2_pipe_reset);
+		of_property_read_u32(sub_node,
+			    "p3_pipe_reset",
+			    &rtk_usb->power_ctrl_reg.p3_pipe_reset);
+
+		/* for suspend */
+		of_property_read_u32(sub_node,
+			    "p0_gusb2phycfg",
+			    &rtk_usb->power_ctrl_reg.p0_gusb2phycfg);
+		of_property_read_u32(sub_node,
+			    "p0_gusb3pipectl",
+			    &rtk_usb->power_ctrl_reg.p0_gusb3pipectl);
+
+		of_property_read_u32(sub_node,
+			    "p1_gusb2phycfg",
+			    &rtk_usb->power_ctrl_reg.p1_gusb2phycfg);
+		of_property_read_u32(sub_node,
+			    "p1_gusb3pipectl",
+			    &rtk_usb->power_ctrl_reg.p1_gusb3pipectl);
+
+		of_property_read_u32(sub_node,
+			    "p2_gusb2phycfg",
+			    &rtk_usb->power_ctrl_reg.p2_gusb2phycfg);
+		of_property_read_u32(sub_node,
+			    "p2_gusb3pipectl",
+			    &rtk_usb->power_ctrl_reg.p2_gusb3pipectl);
+
+		of_property_read_u32(sub_node,
+			    "p3_gusb2phycfg",
+			    &rtk_usb->power_ctrl_reg.p3_gusb2phycfg);
+		of_property_read_u32(sub_node,
+			    "p3_gusb3pipectl",
+			    &rtk_usb->power_ctrl_reg.p3_gusb3pipectl);
+
+		of_property_read_u32(sub_node,
+			    "usb_charger",
+			    &rtk_usb->power_ctrl_reg.usb_charger);
+
+		if (of_property_read_bool(sub_node, "usb_power_cut"))
+			rtk_usb->usb_power_cut = true;
+		else
+			rtk_usb->usb_power_cut = false;
+
+	}
+
+	sub_node = of_get_child_by_name(node, "type_c");
+	if (sub_node) {
+		pr_debug("%s sub_node %s\n", __func__, sub_node->name);
+
+		ret = of_property_read_u32(sub_node,
+			    "usb_typec_ctrl_cc1_0",
+			    &rtk_usb->type_c.usb_typec_ctrl_cc1_0);
+		if (ret)
+			rtk_usb->type_c.usb_typec_ctrl_cc1_0 = 0;
+	}
+
+	pr_debug("%s END\n", __func__);
+
+	return rtk_usb;
+}
+
+static int usb_soc_free(struct rtk_usb **rtk_usb)
+{
+	if (*rtk_usb) {
+		kfree(*rtk_usb);
+		*rtk_usb = NULL;
+	}
+	return 0;
+}
+
+int rtk_usb_rtd129x_init(struct rtk_usb_ops *ops)
+{
+
+	if (ops == NULL)
+		return -1;
+
+	ops->usb_soc_init = &usb_soc_init;
+	ops->usb_soc_free = &usb_soc_free;
+
+	ops->usb_port_suspend_resume = &usb_port_suspend_resume;
+	ops->usb_set_hw_l4icg_on_off = &usb_set_hw_l4icg_on_off;
+
+	ops->usb_iso_power_ctrl = &usb_iso_power_ctrl;
+
+	ops->usb_set_charger_power = &usb_set_charger_power;
+
+	/* For Type c */
+	ops->type_c_init = &type_c_init;
+	ops->type_c_plug_config = &type_c_plug_config;
+
+	return 0;
+}
+EXPORT_SYMBOL(rtk_usb_rtd129x_init);
+
+MODULE_LICENSE("GPL");

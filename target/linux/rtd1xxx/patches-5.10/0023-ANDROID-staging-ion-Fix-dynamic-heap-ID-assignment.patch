@@ -1,0 +1,115 @@
+From 030f41fec684c43c2d026f3b4403becd853a8c4e Mon Sep 17 00:00:00 2001
+From: "Isaac J. Manjarres" <isaacm@codeaurora.org>
+Date: Thu, 5 Sep 2019 14:55:28 -0700
+Subject: [PATCH 23/50] ANDROID: staging: ion: Fix dynamic heap ID assignment
+
+The current implementation derives the heap ID using
+ffs(), which is one-indexed, and then proceeds to use
+this value with functions such as find_next_zero_bit()
+and test_and_set_bit() which operate under a zero-indexing
+scheme. This can lead to some clumsy/erroneous handling when
+dynamically allocating a heap ID, as follows:
+
+CMA heap bits range: [8, 15]
+
+First CMA heap without a heap ID registration:
+
+start_bit = ffs(ION_HEAP_DMA_START) /* 9 */
+end_bit = ffs(ION_HEAP_DMA_END) /* 16 */
+id_bit = find_next_zero_bit(dev->heap_ids, 16 + 1, 9) /* 9 */
+test_and_set_bit(9 - 1, dev->heap_ids) /* Succeeds */
+
+Second CMA heap without a heap ID registration:
+
+start_bit = ffs(ION_HEAP_DMA_START) /* 9 */
+end_bit = ffs(ION_HEAP_DMA_END) == 16 /* 16 */
+id_bit = find_next_zero_bit(dev->heap_ids, 16 + 1, 9) /* 9 */
+test_and_set_bit(9 - 1, dev->heap_ids) /* Fails */
+
+Thus, switch to a zero-indexing scheme when deriving the
+heap ID parameters to simplify the logic, as well as correct
+the dynamic heap ID assignment logic.
+
+Fixes: acbfdf321afb ("ANDROID: staging: ion: add support for consistent heap ids")
+Change-Id: I66d0f3838a3ef4dc4ff8537f23dd4e226472b9e2
+Signed-off-by: Isaac J. Manjarres <isaacm@codeaurora.org>
+---
+ drivers/staging/android/ion/ion.c | 33 ++++++++++++++-----------------
+ 1 file changed, 15 insertions(+), 18 deletions(-)
+
+diff --git a/drivers/staging/android/ion/ion.c b/drivers/staging/android/ion/ion.c
+index 92355666f..b43655da4 100644
+--- a/drivers/staging/android/ion/ion.c
++++ b/drivers/staging/android/ion/ion.c
+@@ -229,33 +229,30 @@ DEFINE_SIMPLE_ATTRIBUTE(debug_shrink_fops, debug_shrink_get,
+ 
+ static int ion_assign_heap_id(struct ion_heap *heap, struct ion_device *dev)
+ {
+-	int id_bit;
+-	int start_bit, end_bit = -1;
++	int id_bit = -EINVAL;
++	int start_bit = -1, end_bit = -1;
+ 
+ 	switch (heap->type) {
+ 	case ION_HEAP_TYPE_SYSTEM:
+-		id_bit = ffs(ION_HEAP_SYSTEM);
++		id_bit = __ffs(ION_HEAP_SYSTEM);
+ 		break;
+ 	case ION_HEAP_TYPE_SYSTEM_CONTIG:
+-		id_bit = ffs(ION_HEAP_SYSTEM_CONTIG);
++		id_bit = __ffs(ION_HEAP_SYSTEM_CONTIG);
+ 		break;
+ 	case ION_HEAP_TYPE_CHUNK:
+-		id_bit = ffs(ION_HEAP_CHUNK);
++		id_bit = __ffs(ION_HEAP_CHUNK);
+ 		break;
+ 	case ION_HEAP_TYPE_CARVEOUT:
+-		id_bit = 0;
+-		start_bit = ffs(ION_HEAP_CARVEOUT_START);
+-		end_bit = ffs(ION_HEAP_CARVEOUT_END);
++		start_bit = __ffs(ION_HEAP_CARVEOUT_START);
++		end_bit = __ffs(ION_HEAP_CARVEOUT_END);
+ 		break;
+ 	case ION_HEAP_TYPE_DMA:
+-		id_bit = 0;
+-		start_bit = ffs(ION_HEAP_DMA_START);
+-		end_bit = ffs(ION_HEAP_DMA_END);
++		start_bit = __ffs(ION_HEAP_DMA_START);
++		end_bit = __ffs(ION_HEAP_DMA_END);
+ 		break;
+ 	case ION_HEAP_TYPE_CUSTOM ... ION_HEAP_TYPE_MAX:
+-		id_bit = 0;
+-		start_bit = ffs(ION_HEAP_CUSTOM_START);
+-		end_bit = ffs(ION_HEAP_CUSTOM_END);
++		start_bit = __ffs(ION_HEAP_CUSTOM_START);
++		end_bit = __ffs(ION_HEAP_CUSTOM_END);
+ 		break;
+ 	default:
+ 		return -EINVAL;
+@@ -269,9 +266,9 @@ static int ion_assign_heap_id(struct ion_heap *heap, struct ion_device *dev)
+ 	 * If the heap hasn't picked an id by itself, then we assign it
+ 	 * one.
+ 	 */
+-	if (!id_bit) {
++	if (id_bit < 0) {
+ 		if (heap->id) {
+-			id_bit = ffs(heap->id);
++			id_bit = __ffs(heap->id);
+ 			if (id_bit < start_bit || id_bit > end_bit)
+ 				return -EINVAL;
+ 		} else {
+@@ -282,9 +279,9 @@ static int ion_assign_heap_id(struct ion_heap *heap, struct ion_device *dev)
+ 		}
+ 	}
+ 
+-	if (test_and_set_bit(id_bit - 1, dev->heap_ids))
++	if (test_and_set_bit(id_bit, dev->heap_ids))
+ 		return -EEXIST;
+-	heap->id = id_bit - 1;
++	heap->id = id_bit;
+ 	dev->heap_cnt++;
+ 
+ 	return 0;
+-- 
+2.17.1
+

@@ -1,0 +1,24 @@
+config REALTEK_RPC
+	tristate "Realtek RPC driver"
+	depends on REALTEK_SOC
+	default y
+	help
+	  Realtek RPC driver.
+
+config REALTEK_RPC_VE3
+	tristate "Realtek VE3 RPC"
+	depends on REALTEK_RPC
+	help
+	  Enable Realtek VE3 RPC.
+
+config REALTEK_RPC_HIFI
+	tristate "Realtek HIFI RPC"
+	depends on REALTEK_RPC
+	help
+	  Enable Realtek HIFI RPC.
+
+config RPC_KERN_VE2
+	tristate "Realtek VE2 Intr RPC"
+	depends on REALTEK_RPC
+	help
+	  Use Intr RPC in kernel for v4L2 feature.

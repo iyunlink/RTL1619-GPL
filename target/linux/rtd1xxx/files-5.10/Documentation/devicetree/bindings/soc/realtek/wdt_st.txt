@@ -1,0 +1,16 @@
+Realtek Watchdog Status Driver DT-bindings
+==========================================
+
+Required properties:
+
+- reg: address and size of the device.
+
+- compatible: shall be "realtek,rtd1619b-watchdog-status".
+
+
+Example:
+	watchdog5: watchdog-st@aa0 {
+		reg = <0xaa0 0x20>;
+		compatible = "realtek,rtd1619b-watchdog-status";
+	};
+

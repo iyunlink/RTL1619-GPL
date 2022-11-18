@@ -1,0 +1,25 @@
+From 85d04e40d26fb73c2891c67d584ffea2ff4a4c54 Mon Sep 17 00:00:00 2001
+From: Charles Lin <charleslin@realtek.com>
+Date: Tue, 26 Jan 2021 17:45:50 +0800
+Subject: [PATCH 03/54] 201: ignore *.symversions on clang build
+
+Change-Id: I5218ca0ab38e5ecfbcb4c19bb626aa07b4936d48
+---
+ .gitignore | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/.gitignore b/.gitignore
+index 67d2f3503..372e57abb 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -41,6 +41,7 @@
+ *.so.dbg
+ *.su
+ *.symtypes
++*.symversions
+ *.tab.[ch]
+ *.tar
+ *.xz
+-- 
+2.17.1
+

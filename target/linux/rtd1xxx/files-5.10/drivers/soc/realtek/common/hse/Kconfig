@@ -1,0 +1,16 @@
+
+config RTK_HSE
+	tristate "Realtek Highspeed Streaming Engine driver"
+	default y if ARCH_REALTEK
+	help
+	  Enable Realtek HSE driver. If unsure, say N.
+
+config RTK_HSE_DMA
+	bool "add DMA Engine for HSE"
+	depends on DMADEVICES
+	depends on RTK_HSE
+	select DMA_ENGINE
+	select DMA_ENGINE_RAID
+	select ASYNC_TX_ENABLE_CHANNEL_SWITCH
+	help
+	  Add DMA Engine for HSE. If unsure, say N

@@ -1,0 +1,19 @@
+#!/bin/sh /etc/rc.common
+
+START=99
+
+boot() {
+	case $(board_name) in
+	wd,drax-emmc|\
+	wd,rocket-emmc|\
+	realtek,bleeding-edge-emmc|\
+	realtek,pym-particles-emmc)
+		ln -s /etc/realtek/fw_env_emmc.config /etc/fw_env.config
+		;;
+	synology,dsxxx-nas|\
+	realtek,bleeding-edge-spi|\
+	realtek,bleeding-edge-spi-purenas)
+		ln -s /etc/realtek/fw_env_spi.config /etc/fw_env.config
+		;;
+	esac
+}

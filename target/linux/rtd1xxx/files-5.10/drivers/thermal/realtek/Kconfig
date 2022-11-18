@@ -1,0 +1,18 @@
+config RTK_THERMAL
+	tristate "Realtek thermal management"
+	depends on OF && THERMAL_OF
+	depends on ARCH_REALTEK || COMPILE_TEST
+	default y
+	help
+	  Enable thermal management with a generic thermal
+	  sensor driver on Realtek SoCs.
+
+	  If you want this support, you should say Y here.
+
+config RTK_THERMAL_CPU_CORE_COOLING
+	tristate "Realtek CPU core cooling device"
+	select RTK_CPUHP_QOS
+	help
+	This enable Realtek CPU core cooling device drvier
+
+        If not sure, say N

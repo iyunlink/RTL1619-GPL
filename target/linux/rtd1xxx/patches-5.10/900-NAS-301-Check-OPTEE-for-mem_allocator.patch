@@ -1,0 +1,35 @@
+From 6999060122c3a677e3b74c76ed9236d3a0542fea Mon Sep 17 00:00:00 2001
+Date: Fri, 15 Apr 2022 12:03:19 +0800
+Subject: [PATCH] soc: realtek: common: mem_allocator: Check OPTEE for
+ protected memory notification
+
+Change-Id: I87d1200921c2eaa5f4a990dc082172d671276e0e
+---
+ drivers/soc/realtek/common/mem_allocator/rtk/src/dev.c | 4 +++-
+ 1 file changed, 3 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/soc/realtek/common/mem_allocator/rtk/src/dev.c b/drivers/soc/realtek/common/mem_allocator/rtk/src/dev.c
+index d5b04745e9c5d..fdcb6df3a843c 100644
+--- a/drivers/soc/realtek/common/mem_allocator/rtk/src/dev.c
++++ b/drivers/soc/realtek/common/mem_allocator/rtk/src/dev.c
+@@ -608,14 +608,16 @@ static int rtk_ion_probe(struct platform_device *pdev)
+ 	struct ion_heap **heaps;
+ 	struct ion_platform_data *pdata;
+ 	struct ion_platform_heap *heap_data;
+-	struct tee_mem_api_module *tee_module;
+ 	unsigned int pdata_needs_freed;
+ 
++#if IS_ENABLED(CONFIG_OPTEE)
++	struct tee_mem_api_module *tee_module;
+ 	tee_module = tee_mem_protected_get_gmodule();
+ 	if (tee_module != NULL)
+ 		ion_rtk_protected_notifier_register(&tee_module->protected_notifier);
+ 	else
+ 		return -EPROBE_DEFER;
++#endif
+ 
+ 	idev = &pdev->dev;
+ 	if (pdev->dev.of_node) {
+-- 
+2.17.1
+

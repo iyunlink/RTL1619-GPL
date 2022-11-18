@@ -1,0 +1,21 @@
+--- a/libfstools/rootdisk.c
++++ b/libfstools/rootdisk.c
+@@ -31,6 +31,9 @@
+ 
+ #define ROOTDEV_OVERLAY_ALIGN	(64ULL * 1024ULL)
+ #define F2FS_MINSIZE		(100ULL * 1024ULL * 1024ULL)
++#define ROOTFS_MINSIZE		(96ULL * 1024ULL * 1024ULL)
++#define ROOTFS_MINALIGN		(10ULL * 1024ULL * 1024ULL)
++
+ 
+ struct squashfs_super_block {
+ 	uint32_t s_magic;
+@@ -151,6 +154,8 @@ static struct volume *rootdisk_volume_fi
+ 	p->v.name = DATA_LABEL;
+ 
+ 	p->offset = le64_to_cpu(sb.bytes_used);
++	p->offset += ROOTFS_MINALIGN;
++	if (p->offset < ROOTFS_MINSIZE) p->offset = ROOTFS_MINSIZE;
+ 	p->offset = ((p->offset + (ROOTDEV_OVERLAY_ALIGN - 1)) &
+ 		     ~(ROOTDEV_OVERLAY_ALIGN - 1));
+ 

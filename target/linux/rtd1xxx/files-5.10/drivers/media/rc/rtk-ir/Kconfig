@@ -1,0 +1,75 @@
+# SPDX-License-Identifier: GPL-2.0-only
+config IR_RTK
+	tristate "Realtek IR remote control"
+	depends on RC_CORE
+	help
+	   Say Y if you want to use the IR remote control available
+	   on REALTEK family SoCs.
+
+	   To compile this driver as a module, choose M here: the
+	   module will be called rtk-ir.
+
+config IR_RTK_HW
+	bool "Hardware decoder"
+	depends on IR_RTK
+	help
+	   Say Y here to enable the hardware decode driver which decodes the IR
+	   signals in hardware. This is more reliable, consumes less processing
+	   power since only a single interrupt is received for each scancode,
+	   and allows an IR scancode to be used as a wake event.
+
+choice
+	bool "HW decoder Selection"
+	depends on IR_RTK_HW
+
+config IR_RTK_HW_NEC
+	bool "NEC protocol"
+
+config IR_RTK_HW_RSTEP
+	bool "RSTEP protocol"
+
+config IR_RTK_HW_XMP
+	bool "XMP protocol"
+
+config IR_RTK_HW_SKY
+	bool "SKY protocol"
+
+endchoice
+
+config IR_RTK_HW1
+	bool "Seconde Hardware decoder"
+	depends on IR_RTK
+	help
+	   Say Y here to enable the second hardware decode driver which decodes
+	   the IR signals in hardware. This is more reliable, consumes less
+	   processing power since only a single interrupt is received for each
+	   scancode, and allows an IR scancode to be used as a wake event.
+
+choice
+	bool "HW1 decoder Selection"
+	depends on IR_RTK_HW1
+
+config IR_RTK_HW1_NEC
+	bool "NEC protocol"
+
+config IR_RTK_HW1_RSTEP
+	bool "RSTEP protocol"
+
+config IR_RTK_HW1_XMP
+	bool "XMP protocol"
+
+config IR_RTK_HW_SKY
+	bool "SKY protocol"
+
+endchoice
+
+config IR_RTK_RAW
+	bool "Raw decoder"
+	depends on IR_RTK
+	help
+	   Say Y here to enable the raw mode driver which passes raw IR signal
+	   changes to the IR raw decoders for software decoding. This is much
+	   less reliable (due to lack of timestamps) and consumes more
+	   processing power than using hardware decode, but can be useful for
+	   testing, debug, and to make more protocols available.
+

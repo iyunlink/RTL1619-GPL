@@ -1,0 +1,18 @@
+Realrek Interrupt Controller
+
+Required properties:
+
+- compatible : "realtek,rtd13xx-iso-irq-mux" for rtd1319 SoCs
+               "realtek,rtd13xx-misc-irq-mux" for rtd1319 SoCs
+               "realtek,rtd16xxb-iso-irq-mux" for rtd1619b SoCs
+               "realtek,rtd16xxb-misc-irq-mux" for rtd1619b SoCs
+
+Example:
+
+iso_irq_mux: iso_irq_mux {
+	compatible = "realtek,rtd13xx-iso-irq-mux";
+	syscon = <&iso>;
+	interrupts = <GIC_SPI 41 IRQ_TYPE_LEVEL_HIGH>;
+	interrupt-controller;
+	#interrupt-cells = <1>;
+};
